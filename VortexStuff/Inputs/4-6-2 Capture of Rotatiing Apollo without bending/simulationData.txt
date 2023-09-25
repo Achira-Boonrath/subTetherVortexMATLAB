@@ -1,0 +1,16 @@
+OSGview	1
+netModel	0
+CMsPresent	1
+tetherPresent	0
+nTethers	0
+targetPresent	0
+chaserPresent	0
+closingMechanismType	0
+stdClosingMechTime	3.0
+gravity	0.0
+finalTime	3.0
+tstep	0.016667
+tsave	0.016667
+tcontrol 0.00000
+ScreenshotTime	120.0
+ResultsPath 2019c_Thesis_Data/Capture4-6-2/NoBending/NoRelaxation/		

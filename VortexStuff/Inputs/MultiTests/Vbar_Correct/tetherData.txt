@@ -1,0 +1,17 @@
+tetherFlexible	1
+area 	 0.000001
+diameter 	 0.001000
+youngModulus 	 60000000000.000000
+natLength 	 30.000000
+numNode 	 2.000000
+segNatLength 	 10.000000
+segStiffness 	 4712.388980
+segDamping 	 48.000000
+segMass 	 0.007618
+winchRadius	 0
+ringsNb	0
+tethersNb 0
+tetherRadius	0.002
+tetherLength	30.0
+tetherDensity	1390.0
+tetherYoungModulus	70000000000

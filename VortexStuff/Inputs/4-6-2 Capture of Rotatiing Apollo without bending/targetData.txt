@@ -1,0 +1,7 @@
+offsetX	0.0
+offsetY	0.0
+targetDistanceFromNet	10.0
+targetRadius	1.95
+targetAngleWithXaxis	0.0
+targetAngularVelocityMagnitude	5.0
+targetSpacecraft	apollo

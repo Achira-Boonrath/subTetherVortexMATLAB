@@ -1,0 +1,7 @@
+The solver type is 0 
+The solver tolerance is 0.001 
+The solver max iteration is 1.72923e-322 
+The integrator time step is 0.0166667 
+The integrator time step is 0.0166667 
+
+It took 978.33 seconds to integrate. 
