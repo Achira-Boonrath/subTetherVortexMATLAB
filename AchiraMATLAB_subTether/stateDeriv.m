@@ -15,14 +15,24 @@ function [ds] = stateDeriv(t,s,massPoint1, targetM,targetI,chaserM, chaserI, cha
 
     Lc = chaserSideLength;
 
-    quar_CDot = 0.5*[[-quar_C(2) -quar_C(3) -quar_C(4)];[quar_C(1) -quar_C(4) quar_C(3)];...
-        [quar_C(4) quar_C(1) -quar_C(2)];[-quar_C(3) quar_C(2) quar_C(1)]]*omegaChaser; 
-   
-    quar_TDot = 0.5*[[-quar_T(2) -quar_T(3) -quar_T(4)];[quar_T(1) -quar_T(4) quar_T(3)];...
-        [quar_T(4) quar_T(1) -quar_T(2)];[-quar_T(3) quar_T(2) quar_T(1)]]*omegaTarget; 
+    %From Liam Thesis
+%     quar_CDot = 0.5*[[-quar_C(2) -quar_C(3) -quar_C(4)];[quar_C(1) -quar_C(4) quar_C(3)];...
+%         [quar_C(4) quar_C(1) -quar_C(2)];[-quar_C(3) quar_C(2) quar_C(1)]]*omegaChaser;
+%    
+%     quar_TDot = 0.5*[[-quar_T(2) -quar_T(3) -quar_T(4)];[quar_T(1) -quar_T(4) quar_T(3)];...
+%         [quar_T(4) quar_T(1) -quar_T(2)];[-quar_T(3) quar_T(2) quar_T(1)]]*omegaTarget ;
+
+    %From Stadnyk and Howell 2020,
+    skewSymEpsilon_C =[0 -quar_C(3) quar_C(2) ; quar_C(3) 0 -quar_C(1) ; -quar_C(2) quar_C(1) 0 ];
+    skewSymEpsilon_T =[0 -quar_T(3) quar_T(2) ; quar_T(3) 0 -quar_T(1) ; -quar_T(2) quar_T(1) 0 ];
     
+    quar_CDot = 0.5*[(skewSymEpsilon_C+quar_C(4)*eye(3))*omegaChaser; -[quar_C(1); quar_C(2); quar_C(3)]'*omegaChaser];
+   
+    quar_TDot = 0.5*[(skewSymEpsilon_T+quar_T(4)*eye(3))*omegaTarget; -[quar_T(1); quar_T(2); quar_T(3)]'*omegaTarget];
+
     %% Rot Mat
 
+    %From Stadnyk and Howell 2020,
     rotMat_C_A_I =[ 1-2*quar_C(2)^2-2*quar_C(3)^2,  2*(quar_C(1)*quar_C(2)+quar_C(3)*quar_C(4)),      2*(quar_C(1)*quar_C(3)-quar_C(4)*quar_C(2));
               2*(quar_C(1)*quar_C(2)-quar_C(4)*quar_C(3)),    1-2*quar_C(1)^2-2*quar_C(3)^2,   2*(quar_C(2)*quar_C(3)+quar_C(4)*quar_C(1));
               2*(quar_C(1)*quar_C(3)+quar_C(4)*quar_C(2)),    2*(quar_C(2)*quar_C(3)-quar_C(4)*quar_C(1)),     1-2*quar_C(1)^2-2*quar_C(2)^2];
@@ -30,7 +40,6 @@ function [ds] = stateDeriv(t,s,massPoint1, targetM,targetI,chaserM, chaserI, cha
     rotMat_D_A_I =[ 1-2*quar_T(2)^2-2*quar_T(3)^2,  2*(quar_T(1)*quar_T(2)+quar_T(3)*quar_T(4)),      2*(quar_T(1)*quar_T(3)-quar_T(4)*quar_T(2));
               2*(quar_T(1)*quar_T(2)-quar_T(4)*quar_T(3)),    1-2*quar_T(1)^2-2*quar_T(3)^2,   2*(quar_T(2)*quar_T(3)+quar_T(4)*quar_T(1));
               2*(quar_T(1)*quar_T(3)+quar_T(4)*quar_T(2)),    2*(quar_T(2)*quar_T(3)-quar_T(4)*quar_T(1)),     1-2*quar_T(1)^2-2*quar_T(2)^2];
-
 %%
     appTorqueChaser = zeros(3,1) ;
     appTorqueTarget = zeros(3,1) ;
@@ -76,10 +85,6 @@ function [ds] = stateDeriv(t,s,massPoint1, targetM,targetI,chaserM, chaserI, cha
         l_st = norm(l_st_vec);
         evec_st = l_st_vec/l_st;
         VR_st = velPoint1 - velTarget - rotMat_D_A_I'*(cross(omegaTarget,distAttPt_to_D));
-
-%         l_st = norm(l_st_vec);
-%         evec_st = l_st_vec/l_st;
-%         VR_st = velPoint1 - velChaser - rotMat_D_A_I'*(cross(omegaChaser,0.5*Lc*[1 0 0]'));
     
         if (l_st > l0vec(i+1))
             Tmag_st = Kvec(i+1)*(l_st - l0vec(i+1))+ cVec(1)* dot(VR_st,evec_st );
@@ -88,18 +93,16 @@ function [ds] = stateDeriv(t,s,massPoint1, targetM,targetI,chaserM, chaserI, cha
             end
         end
 
-        appTorqueChaser = appTorqueChaser + cross(distAttPt_to_D, rotMat_D_A_I*Tvec_st(:,i));
+        appTorqueTarget = appTorqueTarget + cross(distAttPt_to_D, rotMat_D_A_I*Tvec_st(:,i));
     end
 
     accTarget = (Tvec_st(:,1)+Tvec_st(:,2)+Tvec_st(:,3)+Tvec_st(:,4))/targetM;
 
 %% N2L Connection Point
 
+    s(30:32);
     accPoint1 = -(Tvec_st(:,1)+Tvec_st(:,2)+Tvec_st(:,3)+Tvec_st(:,4) + Tvec_mt)/massPoint1;
 %%
-
-%     appTorqueChaser = zeros(3,1) ;
-%     appTorqueTarget = zeros(3,1) ;
 
     omegaDotChaser = inv(chaserI)*(appTorqueChaser - cross(omegaChaser,chaserI*omegaChaser ) );
 
