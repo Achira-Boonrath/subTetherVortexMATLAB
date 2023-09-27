@@ -1,4 +1,4 @@
-targetMass 	 3000.0038091800002
+targetMass 	 500.003809
 targetSideLengthX 	 1.250000
 targetSideLengthY 	 1.750000
 targetSideLengthZ 	 1.250000
@@ -10,7 +10,7 @@ targetIVelY 	 0.0
 targetIVelZ 	 0.0
 targetIAngRateX 	 0.000000
 targetIAngRateY 	 0.000000
-targetIAngRateZ 	 0.100000
+targetIAngRateZ 	 0.000000
 targetIQuatS 	 0.7071
 targetIQuatX 	 0.0
 targetIQuatY 	 0.0

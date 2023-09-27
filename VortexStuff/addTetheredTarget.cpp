@@ -39,7 +39,8 @@ void addTetheredTarget(VxSmartInterface<Assembly> assembly, std::string pathData
 	// read data for target
 	std::stringstream targetDataFileName;
 	targetDataFileName << pathData << "targetData.txt";
-	VxReal targetMass = 3000.00380918; //readParameter<VxReal>("targetMass", targetDataFileName);
+	//VxReal targetMass = 3000.00380918; //readParameter<VxReal>("targetMass", targetDataFileName);
+	VxReal targetMass = readParameter<VxReal>("targetMass", targetDataFileName);; //readParameter<VxReal>("targetMass", targetDataFileName);
 	VxReal targetSideLengthX = readParameter<VxReal>("targetSideLengthX", targetDataFileName);
 	VxReal targetSideLengthY = readParameter<VxReal>("targetSideLengthY", targetDataFileName);
 	VxReal targetSideLengthZ = readParameter<VxReal>("targetSideLengthZ", targetDataFileName);
@@ -76,8 +77,16 @@ void addTetheredTarget(VxSmartInterface<Assembly> assembly, std::string pathData
 	VxSmartInterface<CollisionGeometry> cg = VxExtensionFactory::create(VxDynamics::Box::kFactoryKey); 
     cg = box;
 	(*tetheredTargetPartPtr)->addCollisionGeometry(cg);
-	(*tetheredTargetPartPtr)->autoComputeInertiaAndCOM();
-//   	(*tetheredTargetPartPtr)->getVxPart()->setMassAndInertia(targetMass,targetInertia);
+	(*tetheredTargetPartPtr)->autoComputeInertiaAndCOM();//Liam Original
+
+	//VxReal targetJx = 15000;
+	//VxReal targetJy = 3000;
+	//VxReal targetJz = 15000;
+	//VxReal targetJxy = 0;
+	//VxReal targetJxz = 0;
+	//VxReal targetJyz = 0;
+	//VxReal33 targetInertia = { (targetJx,targetJxy,targetJxz),(targetJxy,targetJy,targetJyz),(targetJxz,targetJyz,targetJz) };
+ //  	(*tetheredTargetPartPtr)->getVxPart()->setMassAndInertia(targetMass,targetInertia);
 
 
 	//auto RA = VxMath::Transformation::createRotation(VxQuaternion(targetQuat[0], targetQuat[1], targetQuat[2], targetQuat[3]));

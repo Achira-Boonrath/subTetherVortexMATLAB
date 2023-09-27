@@ -177,7 +177,7 @@ using namespace VxSim;
 using namespace CableSystems::DynamicsICD;
 
 // LF 2/27/23
-//#define GRAPHICS // Turns graphics on or off
+//#define GRAPHICS // Turn1s graphics on or off
 #define SCREENSHOT // Turns screenshots on or off (requires graphics to be defined)
 #define GRAPHICS_COM // used for camera in the system center of mass while on orbit
 
@@ -480,7 +480,8 @@ int main(int argc, const char* argv[])
 
 			//Removed: Save initial conditions
 
-
+			auto targetInertia = (*tetheredTargetPartPtr)->getVxPart()->getMassProperties();
+			//std::cout << targetInertia() << std::endl;
 			//Removed: Save masses of net and corner masses
 
 			
@@ -540,11 +541,12 @@ int main(int argc, const char* argv[])
 			//const Vx::VxArray<VxSim::VxSmartInterface<VxDynamics::Constraint>> v = Assem->getConstraints();
 			//VxSim::VxSmartInterface<VxDynamics::DistanceJoint> vG = v[0];
 			
-			// Node Initial Conditions
-			if (numNode > 0)
-			{
-				NodeInitialConditionsFromInput(chaserPartPtr, tetheredTargetPartPtr, partVector, numNode,pathData);
-			}
+			//AB turn off
+			//// Node Initial Conditions
+			//if (numNode > 0)
+			//{
+			//	NodeInitialConditionsFromInput(chaserPartPtr, tetheredTargetPartPtr, partVector, numNode,pathData);
+			//}
 
 			//Vx::VxVector3 chaserAng = (*chaserPartPtr)->getVxPart()->getAngularVelocity();
 
@@ -1009,7 +1011,7 @@ int main(int argc, const char* argv[])
 				}
 
 				//AB, for Sys ID
-				InputThrust = VxVector3(-100.0, 0.0, 0.0);
+				InputThrust = VxVector3(-500.0, 0.0, 0.0);
 				(*chaserPartPtr)->getVxPart()->addForce(InputThrust);
 				//(*tetheredTargetPartPtr)->getVxPart()->addForce(InputThrust);
 
@@ -1082,6 +1084,11 @@ int main(int argc, const char* argv[])
 					{
 						fprintf(outPD, "%1.15f \t %1.15f \t %1.15f", InputThrust.x(), InputThrust.y(), InputThrust.z());
 						fprintf(outPD, "\n");
+					}
+
+					if (numNode > 0)
+					{
+						saveDynamicsQuantitiesNodes(partVector, outNodesPos, outNodesVel, outTension, numNode);
 					}
 #ifdef Gravity
 

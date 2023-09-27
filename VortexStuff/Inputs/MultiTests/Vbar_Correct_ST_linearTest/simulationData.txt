@@ -8,4 +8,4 @@ closingMechanismType 2
 gravity	0.0
 finalTime	90.0
 tstep	0.00002
-tsave	0.001
+tsave	0.1
