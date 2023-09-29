@@ -199,7 +199,8 @@ VxSim::VxSmartInterface<VxContent::Scene>  createScene(std::string pathData, VxS
 
 		// Implement distance joint as tether
 		segmentLength = tetherLength / (numNode + 1);
-		segmentStiffness = tetherYoungModulus * PI * pow(tetherRadius, 2.00) / segmentLength;
+		segmentStiffness = tetherYoungModulus * PI * pow(tetherRadius/1.0, 2.00) / segmentLength;
+		segmentDamping = segmentStiffness / 10.0;
 
 		std::stringstream chaserDataFileName;
 		chaserDataFileName << pathData << "chaserData.txt";

@@ -8,9 +8,9 @@ targetIPosZ 	 0.0
 targetIVelX 	 0.0
 targetIVelY 	 0.0
 targetIVelZ 	 0.0
-targetIAngRateX 	 0.000000
+targetIAngRateX 	 0.100000
 targetIAngRateY 	 0.000000
-targetIAngRateZ 	 0.100000
+targetIAngRateZ 	 0.000000
 targetIQuatS 	 0.7071
 targetIQuatX 	 0.0
 targetIQuatY 	 0.0

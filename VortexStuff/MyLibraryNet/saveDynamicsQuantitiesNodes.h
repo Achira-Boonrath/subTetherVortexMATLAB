@@ -23,7 +23,7 @@ using namespace VxSim;
 using namespace Vx;
 using namespace VxDynamics;
 
-void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNodes, FILE* outNodesVel, FILE* outTension, const int numNode);
-
+void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNodes, FILE* outNodesVel, FILE* outTension, const int numNode, int TetherType);
+//void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNodes, FILE* outNodesVel, FILE* outTension, const int numNode);
 
 #endif

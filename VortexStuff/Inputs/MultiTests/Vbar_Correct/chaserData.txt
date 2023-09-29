@@ -13,7 +13,7 @@ chaserIVelY 	 0.0
 chaserIVelZ 	 0.0
 chaserIAngRateX 	 0.000000
 chaserIAngRateY 	 0.000000
-chaserIAngRateZ 	 0.100000
+chaserIAngRateZ 	 0.000000
 chaserIQuatS 	 1.0
 chaserIQuatX 	 0.0
 chaserIQuatY 	 0.0

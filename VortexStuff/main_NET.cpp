@@ -572,7 +572,7 @@ int main(int argc, const char* argv[])
 			saveDynamicsQuantitiesChaser(tetheredTargetPart, outTarget);
 			if (numNode > 0)
 			{
-				saveDynamicsQuantitiesNodes(partVector, outNodesPos, outNodesVel, outTension, numNode);
+				saveDynamicsQuantitiesNodes(partVector, outNodesPos, outNodesVel, outTension, numNode, TetherType);
 			}
 
 
@@ -1088,7 +1088,7 @@ int main(int argc, const char* argv[])
 
 					if (numNode > 0)
 					{
-						saveDynamicsQuantitiesNodes(partVector, outNodesPos, outNodesVel, outTension, numNode);
+						saveDynamicsQuantitiesNodes(partVector, outNodesPos, outNodesVel, outTension, numNode, TetherType);
 					}
 #ifdef Gravity
 

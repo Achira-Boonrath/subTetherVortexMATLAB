@@ -30,7 +30,7 @@ using namespace VxSim;
 using namespace Vx;
 using namespace VxDynamics;
 
-void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNodesPos, FILE* outNodesVel, FILE* outTension, const int numNode)
+void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNodesPos, FILE* outNodesVel, FILE* outTension, const int numNode, int TetherType)
 {
 	/*std::vector<double> outPos(numNode*3);
 	std::vector<double> outVel(numNode*3);*/
@@ -96,23 +96,47 @@ void saveDynamicsQuantitiesNodes(VxSmartInterface<Part>* partVector, FILE* outNo
 		
 		
 	}
-	VxSmartInterface<Assembly> Assem = partVector[0]->getParentAssembly();
-	for (int i = 0; i < numNode+1; i++)
+	if (TetherType == 1)
 	{
-		
-		//VxSmartInterface<Assembly> Assem1 = Assem.getObject();
-		VxSim::VxSmartInterface<DistanceJoint> v = Assem->getConstraints()[i];
-		VxReal TensionForce = v->getVxConstraint()->getConstraintEquationForce(0);
-		//const int count = partVector[i]->getVxPart()->getConstraintCount();
-		if (i == 0)
+		VxSmartInterface<Assembly> Assem = partVector[0]->getParentAssembly();
+		for (int i = 0; i < numNode + 1; i++)
 		{
-			fprintf(outTension, "%1.15f", TensionForce);
-		}
-		else 
-		{
-			fprintf(outTension, " \t %1.15f", TensionForce);
-		}
 
+			//VxSmartInterface<Assembly> Assem1 = Assem.getObject();
+			VxSim::VxSmartInterface<DistanceJoint> v = Assem->getConstraints()[i];
+			VxReal TensionForce = v->getVxConstraint()->getConstraintEquationForce(0);
+			//const int count = partVector[i]->getVxPart()->getConstraintCount();
+			if (i == 0)
+			{
+				fprintf(outTension, "%1.15f", TensionForce);
+			}
+			else
+			{
+				fprintf(outTension, " \t %1.15f", TensionForce);
+			}
+
+		}
+	}
+	else if (TetherType == 2)
+	{
+		VxSmartInterface<Assembly> Assem = partVector[0]->getParentAssembly();
+		for (int i = 0; i < numNode + 4; i++)
+		{
+
+			//VxSmartInterface<Assembly> Assem1 = Assem.getObject();
+			VxSim::VxSmartInterface<DistanceJoint> v = Assem->getConstraints()[i];
+			VxReal TensionForce = v->getVxConstraint()->getConstraintEquationForce(0);
+			//const int count = partVector[i]->getVxPart()->getConstraintCount();
+			if (i == 0)
+			{
+				fprintf(outTension, "%1.15f", TensionForce);
+			}
+			else
+			{
+				fprintf(outTension, " \t %1.15f", TensionForce);
+			}
+
+		}
 	}
 	fprintf(outTension, "\n");
 	fprintf(outNodesPos, "\n");
