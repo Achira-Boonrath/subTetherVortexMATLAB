@@ -527,6 +527,20 @@ saveas(RMSEangvel_fig2, 'RMSEangvelT.png')
 saveas(RMSEangvel_fig2, 'RMSEangvelT.eps')
 
 
+%% RMSE for the connection point over time
+RMSEpos_t = sqrt( sum( (nodeInfo(1:end,1) - X3).^2 + (nodeInfo(1:end,2) - Y3).^2 + (nodeInfo(1:end,3) - Z3).^2 ,2 ) / size(X2,2) ); %creates a vector of the RMSE for position at every time interval
+
+n=length(t1);
+RMSEpos_fig2 = figure('DefaultAxesFontSize',12);
+plot(t1, RMSEpos_t,'k',"linewidth",2)
+xlabel('Time, s')
+ylabel('RMSE_t_o_t_a_l, m')
+% xlim([0.7 1.7])
+% ylim([0.0 0.05])
+grid on
+% %title('Capture Without Contact Among Nodes vs Capture With Contact Among Nodes')
+saveas(RMSEpos_fig2, 'RMSEposNode.png')
+saveas(RMSEpos_fig2, 'RMSEposNode.eps')
 %% Plot Tension X
 
 % figure
