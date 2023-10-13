@@ -203,7 +203,8 @@ void displayScene(VxGraphics::ShapeGenerator *mShapeGenerator, VxSmartInterface<
 		VxReal3 tetheredTargetOrientation;
 		tetheredTargetPart->getVxPart()->getOrientationEulerAngles(tetheredTargetOrientation);
 		VxMath::Transformation::setRotation(pointTransform2, tetheredTargetOrientation);
-		VxMath::Transformation::setScale(pointTransform2, Vx::VxVector3(1.25, 1.75, 1.25));
+		//VxMath::Transformation::setScale(pointTransform2, Vx::VxVector3(1.25, 1.75, 1.25));//Liam original
+		VxMath::Transformation::setScale(pointTransform2, Vx::VxVector3(1.75, 1.25, 1.25));//AB
 		mShapeGenerator->drawBox(pointTransform2, VxGraphics::ShapeGenerator::DEFAULT_PASS, targetColor);
 	
 

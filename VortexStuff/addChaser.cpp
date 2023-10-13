@@ -90,8 +90,8 @@ void addChaser(VxSmartInterface<Assembly> assembly, std::string pathData, VxSmar
 	(*chaserPartPtr)->getVxPart()->getOrientationQuaternion(Qvec); // center it with respect to net
 	
 	(*chaserPartPtr)->setAngularVelocity(VxVector3(chaserAngX,chaserAngY,chaserAngZ)); // center it with respect to net
-	//(*chaserPartPtr)->setLinearVelocity(VxVector3(chaserVelX, chaserVelY, chaserVelZ)); // center it with respect to net
-	(*chaserPartPtr)->setLinearVelocity(VxVector3(0, chaserVelY, chaserVelZ)); // center it with respect to net
+	(*chaserPartPtr)->setLinearVelocity(VxVector3(chaserVelX, chaserVelY, chaserVelZ)); // center it with respect to net
+	//(*chaserPartPtr)->setLinearVelocity(VxVector3(0, chaserVelY, chaserVelZ)); // Original, center it with respect to net
 		(*chaserPartPtr)->getVxPart()->setControl(Vx::VxPart::kControlDynamic);   
 		
     assembly->addPart(*chaserPartPtr);

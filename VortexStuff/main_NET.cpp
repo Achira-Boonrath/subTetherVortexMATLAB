@@ -182,7 +182,7 @@ using namespace CableSystems::DynamicsICD;
 #define GRAPHICS_COM // used for camera in the system center of mass while on orbit
 
 //
-//#define GRAVITY // -> Gravitational force applied to each body individually
+#define GRAVITY // -> Gravitational force applied to each body individually
 
 //#define NodeGravity // -> Needed for the two macros below, have to change matrixMult if numNode != 4
 //#define GRAVITYCOM // -> applies the gravitational force associated with the system center of mass to VxUniverse 
@@ -513,6 +513,7 @@ int main(int argc, const char* argv[])
 
 			Vx::VxQuaternion TargetQ;    
 			(*tetheredTargetPartPtr)->getVxPart()->getOrientationQuaternion(TargetQ);
+			//std::cout << TargetQ[0] << std::endl;
 
 			const double PI = 3.141592653589793238463;
 			
@@ -759,10 +760,14 @@ int main(int argc, const char* argv[])
 
 				//AB test
 				Vx::VxVector3 chaserP = (*chaserPartPtr)->getVxPart()->getPosition();
-				//std::cout << chaserP[0] << std::endl;
+				Vx::VxVector3 chaserV = (*chaserPartPtr)->getVxPart()->getLinearVelocity();
+				//std::cout << chaserV[0] << std::endl;
+				//std::cout << chaserV[1] << std::endl;
+				//std::cout << chaserV[2] << std::endl;
 				Vx::VxVector3 targetP = (*tetheredTargetPartPtr)->getVxPart()->getPosition();
 				//std::cout << targetP[0] << std::endl;
 				VxReal NORMPOSITIONS = (chaserP - targetP).norm();
+				//std::cout << NORMPOSITIONS << std::endl;
 
 
  			//	VxPartSet PartsUniverse = VxFrame::instance()->getUniverse(0)->getParts();
@@ -922,8 +927,26 @@ int main(int argc, const char* argv[])
 							VxSmartInterface<Part> p = partVector[i];
 							VxSmartInterface<Part>* pstar = &p;
 							
-							partVector[i]->getVxPart()->addForce(OrbitalMech2BP(pstar, mu));
-							partVector[i]->getVxPart()->addForce(chsGrav);
+							VxVector3 ptGrav = OrbitalMech2BP(pstar, mu);
+							partVector[i]->getVxPart()->addForce(ptGrav);
+							//partVector[i]->getVxPart()->addForce(chsGrav);
+
+
+						}
+					}
+				}
+				else if (TetherType == 2)
+				{
+					if (numNode > 0)
+					{
+						for (int i = 0; i < numNode ; i++)
+						{
+							VxSmartInterface<Part> p = partVector[i];
+							VxSmartInterface<Part>* pstar = &p;
+
+							VxVector3 ptGrav = OrbitalMech2BP(pstar, mu);
+							partVector[i]->getVxPart()->addForce(ptGrav);
+							//partVector[i]->getVxPart()->addForce(chsGrav);
 
 
 						}
@@ -974,6 +997,7 @@ int main(int argc, const char* argv[])
 #endif
 #endif
 
+#ifdef GRAVITY
 				// CLOSED LOOP PD CONTROL
 				VxVector3 InputThrust;
 				std::vector<double> outputPD;
@@ -1011,9 +1035,13 @@ int main(int argc, const char* argv[])
 				}
 
 				//AB, for Sys ID
+#else
 				InputThrust = VxVector3(-500.0, 0.0, 0.0);
-				(*chaserPartPtr)->getVxPart()->addForce(InputThrust);
+
+#endif
+				//(*chaserPartPtr)->getVxPart()->addForce(InputThrust);
 				//(*tetheredTargetPartPtr)->getVxPart()->addForce(InputThrust);
+
 
 				//VxFrame::instance()->getUniverse(0)->setGravity(VxVector3(0.0, 0.0,-9.810));
 				//Vx::VxVector3 Eye = CenterOfMass_System + 60 * CoMUV;
@@ -1056,14 +1084,14 @@ int main(int argc, const char* argv[])
 #ifdef GRAPHICS
 #ifdef GRAPHICS_COM
 
-				//Vx::VxVector3 Eye = CenterOfMass_System + 60 * CoMUV;//
+				Vx::VxVector3 Eye = CenterOfMass_System + 60 * CoMUV;//
 				//Vx::VxVector3 Eye = CenterOfMass_System + 60 * CoMUV;//AB sub tet
 				//Eye = VxVector3(Eye[0], Eye[2], Eye[1]);//AB sub tet
-				//Vx::VxVector3 Center = CenterOfMass_System- VxVector3(10, 0.0, 0.0);
-				//Vx::VxVector3 Up = chaserP.cross(chaserVel);
-				//freeCamera->lookAt(Eye, Center, Up);
+				Vx::VxVector3 Center = CenterOfMass_System- VxVector3(10, 0.0, 0.0);
+				Vx::VxVector3 Up = chaserP.cross(chaserVel);
+				freeCamera->lookAt(Eye, Center, Up);
 
-				freeCamera->lookAt(Vx::VxVector3(0.0, -120, -8), Vx::VxVector3(0.0, 0.0, -12), Vx::VxVector3(0.0, 0.0, 1.0));//AB, for Sens
+				//freeCamera->lookAt(Vx::VxVector3(0.0, -120, -8), Vx::VxVector3(0.0, 0.0, -12), Vx::VxVector3(0.0, 0.0, 1.0));//AB, for Sens
 
 #endif
 #endif

@@ -73,7 +73,9 @@ void addTetheredTarget(VxSmartInterface<Assembly> assembly, std::string pathData
     // Create a dynamic part that contains a box as collision geometry 
 	(*tetheredTargetPartPtr)->parameterMassPropertiesContainer.mass = targetMass;
 	VxSmartInterface<Box> box = VxExtensionFactory::create(VxDynamics::Box::kFactoryKey); 
-	box->parameterDimension = VxVector3(targetSideLengthX, targetSideLengthY, targetSideLengthZ);
+	//box->parameterDimension = VxVector3(targetSideLengthX, targetSideLengthY, targetSideLengthZ); //Liam Original
+
+	box->parameterDimension = VxVector3(targetSideLengthY, targetSideLengthX, targetSideLengthZ); //AB
 	VxSmartInterface<CollisionGeometry> cg = VxExtensionFactory::create(VxDynamics::Box::kFactoryKey); 
     cg = box;
 	(*tetheredTargetPartPtr)->addCollisionGeometry(cg);
@@ -97,7 +99,8 @@ void addTetheredTarget(VxSmartInterface<Assembly> assembly, std::string pathData
 	// Attempting to use VxPart->setTransform() to solve this issue; LF NOPE
 
 	VxTransform BB;
-	BB.setRotation(targetQuat);
+	//BB.setRotation(targetQuat);
+	BB.setRotation(VxQuaternion(targetQuatS, targetQuatX, targetQuatY, targetQuatZ));
 	BB.setTranslation(targetPos);
 	VxMath::Matrix44 tmBB;
 	BB.get(tmBB);
