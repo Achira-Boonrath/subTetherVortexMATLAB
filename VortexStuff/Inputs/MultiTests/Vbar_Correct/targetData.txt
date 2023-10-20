@@ -8,9 +8,9 @@ targetIPosZ 	 2973743.781889
 targetIVelX 	 -2457.764674
 targetIVelY 	 -4404.283389
 targetIVelZ 	 -5712.420605
-targetIAngRateX 	 0.000000
-targetIAngRateY 	 0.000000
-targetIAngRateZ 	 0.000000
+targetIAngRateX 	 0.029619748936000
+targetIAngRateY 	 -0.081379710188800
+targetIAngRateZ 	 0.049999994048000
 targetIQuatS 	 0.556670
 targetIQuatX 	 0.171010
 targetIQuatY 	 0.469846

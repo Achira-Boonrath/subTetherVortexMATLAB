@@ -480,8 +480,25 @@ int main(int argc, const char* argv[])
 
 			//Removed: Save initial conditions
 
-			auto targetInertia = (*tetheredTargetPartPtr)->getVxPart()->getMassProperties();
-			//std::cout << targetInertia() << std::endl;
+			//AB, get target principal moments of inertia
+			Vx::VxMassProperties MC;
+			MC = (*tetheredTargetPartPtr)->getVxPart()->getMassProperties();
+			Vx::VxInertiaTensor H;
+			MC.getInertiaTensorLocal(H);
+			
+			std::cout << H[0][0] << std::endl;
+			std::cout << H[1][1] << std::endl;
+			std::cout << H[2][2] << std::endl;
+
+			//AB, get chaser principal moments of inertia
+			Vx::VxMassProperties MC2;
+			MC2 = (*chaserPartPtr)->getVxPart()->getMassProperties();
+			Vx::VxInertiaTensor H2;
+			MC.getInertiaTensorLocal(H2);
+
+			std::cout << H2[0][0] << std::endl;
+			std::cout << H2[1][1] << std::endl;
+			std::cout << H2[2][2] << std::endl;
 			//Removed: Save masses of net and corner masses
 
 			
@@ -922,7 +939,7 @@ int main(int argc, const char* argv[])
 				{
 					if (numNode > 0)
 					{
-						for (int i = 0; i < numNode - 1; i++)
+						for (int i = 0; i < numNode ; i++)
 						{
 							VxSmartInterface<Part> p = partVector[i];
 							VxSmartInterface<Part>* pstar = &p;
@@ -1010,27 +1027,38 @@ int main(int argc, const char* argv[])
 				else
 				{
 					// OPEN LOOP CONTROL 
-					////VxQuaternion ChaserQ;
-					////(*chaserPartPtr)->getVxPart()->getOrientationQuaternion(ChaserQ);
-					////VxVector3 HHH = ChaserQ.rotate(chaserAtt);
+					
+					//VxQuaternion ChaserQ;
+					//(*chaserPartPtr)->getVxPart()->getOrientationQuaternion(ChaserQ);
+					//VxVector3 HHH = ChaserQ.rotate(chaserAtt);
 
-					////Vx::VxQuaternion TargetQ1;
-					////(*tetheredTargetPartPtr)->getVxPart()->getOrientationQuaternion(TargetQ1);
-					////VxVector3 HHHT = TargetQ1.rotate(targetAtt);
-					////VxVector3 chaserAttPos = ChaserQ.rotate(chaserAtt) + (*chaserPartPtr)->getVxPart()->getPosition();
-					////VxVector3 targetAttPos = TargetQ1.rotate(targetAtt) + (*tetheredTargetPartPtr)->getVxPart()->getPosition();
+					//Vx::VxQuaternion TargetQ1;
+					//(*tetheredTargetPartPtr)->getVxPart()->getOrientationQuaternion(TargetQ1);
+					//VxVector3 HHHT = TargetQ1.rotate(targetAtt);
+					//VxVector3 chaserAttPos = ChaserQ.rotate(chaserAtt) + (*chaserPartPtr)->getVxPart()->getPosition();
+					//VxVector3 targetAttPos = TargetQ1.rotate(targetAtt) + (*tetheredTargetPartPtr)->getVxPart()->getPosition();
 
-					////VxVector3 L = targetAttPos - chaserAttPos;
-					////double Lnorm = L.norm();
+					//VxVector3 L = targetAttPos - chaserAttPos;
+					//double Lnorm = L.norm();
 
-					////InputThrust = -ThrustConstant * L / (L.norm());
-					//////(*chaserPartPtr)->getVxPart()->addForce(-ThrustConstant * L / (L.norm()));
+					//InputThrust = -ThrustConstant * L / (L.norm());
+					//(*chaserPartPtr)->getVxPart()->addForce(-ThrustConstant * L / (L.norm()));
 
-					//////InputThrust = -5 * L / (L.norm());
+					//InputThrust = -5 * L / (L.norm());
 
-					/////*(*chaserPartPtr)->getVxPart()->addForce(-5*chaserVel/(chaserVel.norm()));
+					/*(*chaserPartPtr)->getVxPart()->addForce(-5*chaserVel/(chaserVel.norm()));
 
-					////InputThrust = -5 * chaserVel / (chaserVel.norm());*/
+					InputThrust = -5 * chaserVel / (chaserVel.norm());*/
+
+					ThrustConstant = 100.0;
+					VxVector3 chsVel = (*chaserPartPtr)->getVxPart()->getLinearVelocity();
+					//(*chaserPartPtr)->getVxPart()->addForce(-ThrustConstant * chsVel / chsVel.norm()); //dir opposite to vel
+
+					//AB, deploy along direction opposite to velocity
+					//(*chaserPartPtr)->getVxPart()->addForce(ThrustConstant * chsVel / chsVel.norm());  //dir along vel
+
+					//AB, deploy along direction same with velocity
+					(*chaserPartPtr)->getVxPart()->addForce(-ThrustConstant * chsVel / chsVel.norm());  //dir along vel
 
 				}
 
@@ -1039,7 +1067,8 @@ int main(int argc, const char* argv[])
 				InputThrust = VxVector3(-500.0, 0.0, 0.0);
 
 #endif
-				//(*chaserPartPtr)->getVxPart()->addForce(InputThrust);
+				(*chaserPartPtr)->getVxPart()->addForce(InputThrust);
+
 				//(*tetheredTargetPartPtr)->getVxPart()->addForce(InputThrust);
 
 

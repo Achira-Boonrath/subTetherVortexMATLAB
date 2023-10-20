@@ -182,8 +182,11 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 
 	}
 
-	threadStiffness = 10000;
-	threadDamping = threadStiffness/10;
+	threadStiffness = 1000.0;
+	threadDamping = threadStiffness/10.0;
+	MaxDistance = 15.6875;
+
+	int fixedMaxDist = 1;
 	//threadDamping = 1000;
 	for (int i = 0; i < numNode + 4; i++)
 	{
@@ -192,7 +195,11 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 
 			VxVector3 pos1 = chaser->getVxPart()->getPosition(); //
 			VxVector3 pos2 = partMatrix[i]->getVxPart()->getPosition(); //
-			MaxDistance = (pos1 - pos2).norm();
+
+			if (fixedMaxDist == 0)
+			{
+				MaxDistance = (pos1 - pos2).norm();
+			}
 
 			attachDistance(assembly, chaser, partMatrix[i], VxVector3(.5, 0, 0), VxVector3(0, 0, 0), MaxDistance, threadStiffness, threadDamping);
 			// VxSmartInterface<DistanceJoint> d =
@@ -203,8 +210,12 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 		{
 			VxVector3 pos1 = partMatrix[numNode - 1]->getVxPart()->getPosition(); //
 			VxVector3 pos2 = target->getVxPart()->getPosition(); //
-			MaxDistance = 1.0 * (pos1 - pos2).norm();
-			VxReal threadStiffnessST = threadStiffness / 4.0;
+
+			if (fixedMaxDist == 0)
+			{
+				MaxDistance = 1.0 * (pos1 - pos2).norm();
+			}
+			VxReal threadStiffnessST = threadStiffness / 1.0;
 
 			//Liam Orientation
 			//attachDistance(assembly, partMatrix[numNode - 1], target, VxVector3(0, 0, 0), VxVector3(-1.25 / 2.0, -1.75 / 2, -1.25 / 2.0), MaxDistance, threadStiffnessST, threadDamping);
@@ -216,8 +227,12 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 		{
 			VxVector3 pos1 = partMatrix[numNode - 1]->getVxPart()->getPosition(); //
 			VxVector3 pos2 = target->getVxPart()->getPosition(); //
-			MaxDistance = 1.0 * (pos1 - pos2).norm();
-			VxReal threadStiffnessST = threadStiffness / 4.0;
+
+			if (fixedMaxDist == 0)
+			{
+				MaxDistance = 1.0 * (pos1 - pos2).norm();
+			}
+			VxReal threadStiffnessST = threadStiffness / 1.0;
 			//Liam
 			//attachDistance(assembly, partMatrix[numNode - 1], target, VxVector3(0, 0, 0), VxVector3(-1.25 / 2.0, -1.75 / 2, 1.25 / 2.0), MaxDistance, threadStiffnessST, threadDamping);
 			
@@ -228,8 +243,12 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 		{
 			VxVector3 pos1 = partMatrix[numNode - 1]->getVxPart()->getPosition(); //
 			VxVector3 pos2 = target->getVxPart()->getPosition(); //
-			MaxDistance = 1.0 * (pos1 - pos2).norm();
-			VxReal threadStiffnessST = threadStiffness / 4.0;
+
+			if (fixedMaxDist == 0)
+			{
+				MaxDistance = 1.0 * (pos1 - pos2).norm();
+			}
+			VxReal threadStiffnessST = threadStiffness / 1.0;
 
 			//Liam
 			//attachDistance(assembly, partMatrix[numNode - 1], target, VxVector3(0, 0, 0), VxVector3(1.25 / 2.0, -1.75 / 2, -1.25 / 2.0), MaxDistance, threadStiffnessST, threadDamping);
@@ -241,8 +260,12 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 		{
 			VxVector3 pos1 = partMatrix[numNode - 1]->getVxPart()->getPosition(); //
 			VxVector3 pos2 = target->getVxPart()->getPosition(); //
-			MaxDistance = 1.0 * (pos1 - pos2).norm();
-			VxReal threadStiffnessST = threadStiffness / 4.0;
+
+			if (fixedMaxDist == 0)
+			{
+				MaxDistance = 1.0 * (pos1 - pos2).norm();
+			}
+			VxReal threadStiffnessST = threadStiffness / 1.0;
 
 			//Liam
 			//attachDistance(assembly, partMatrix[numNode - 1], target, VxVector3(0, 0, 0), VxVector3(1.25 / 2.0, -1.75 / 2, 1.25 / 2.0), MaxDistance, threadStiffnessST, threadDamping);
@@ -256,7 +279,11 @@ void attachDistanceN_ST(VxSmartInterface<Assembly> assembly, VxSmartInterface<Pa
 			{
 				VxVector3 pos1 = partMatrix[numNode - 1]->getVxPart()->getPosition(); //
 				VxVector3 pos2 = partMatrix[i]->getVxPart()->getPosition(); //
-				MaxDistance = (pos1 - pos2).norm();
+
+				if (fixedMaxDist == 0)
+				{
+					MaxDistance = (pos1 - pos2).norm();
+				}
 
 				attachDistance(assembly, partMatrix[i - 1], partMatrix[i], VxVector3(0, 0, 0), VxVector3(0, 0, 0), MaxDistance, threadStiffness, threadDamping);
 			}
