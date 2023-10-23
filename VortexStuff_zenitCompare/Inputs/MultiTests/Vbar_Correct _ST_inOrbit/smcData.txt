@@ -1,0 +1,6 @@
+gainC 	 1.000000
+gainI 	 4.000000
+boundaryLayer 	 0.001000
+desAngRateX 	 0.000000
+desAngRateY 	 0.000000
+desAngRateZ 	 0.000000

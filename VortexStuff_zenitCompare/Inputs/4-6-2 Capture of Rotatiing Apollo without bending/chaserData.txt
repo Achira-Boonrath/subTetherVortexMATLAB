@@ -1,0 +1,5 @@
+chaserMass	1600
+chaserSideLength	1.5
+chaserDistanceFromNet	2.75
+chaserZDispLimit	0.1
+chaserDynamic	1

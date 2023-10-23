@@ -1,0 +1,8 @@
+BulletMass	0.5
+alDensity	2700
+alYoungModulus	69000000000
+alPoissonRatio	0.33
+cornerThreadRadius	0.000707106781186548
+cornerThreadLength	-1
+ejectionVelocity	2.5
+shootingAngle	36.87

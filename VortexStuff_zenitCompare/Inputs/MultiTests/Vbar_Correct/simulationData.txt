@@ -1,0 +1,11 @@
+OSGview	1
+netModel	0
+CMsPresent	1
+tetherPresent	1
+targetPresent	1
+chaserPresent	1
+closingMechanismType 2
+gravity	0.0
+finalTime	65.0
+tstep	0.0002
+tsave	0.01

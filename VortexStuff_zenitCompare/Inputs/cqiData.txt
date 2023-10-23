@@ -1,0 +1,7 @@
+RunCQI 	1
+useSafety 	1
+targetLc 	1.95
+targetSA 	159.922774
+targetV 	125.2662947
+lMaxT 	5.835451996
+lMaxC 	1.299038106

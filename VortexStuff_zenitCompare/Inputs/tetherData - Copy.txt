@@ -1,0 +1,21 @@
+tetherFlexible	1
+CLtetherControl	0
+tetherRadius	0.002
+tetherDensity	1390.0
+tetherYoungModulus	70000000000
+EImultiplier	1
+winchRadius	0.05
+desiredRingsDistance	2.0
+proportionalGain	0.1
+derivativeGain	-0.01
+maxAllowableTension	1.0
+minAllowableLength	1.0
+initialControlTime	15.0
+ringsNb	0
+tethersNb	1
+ringsPartX	c; l; l;
+ringsPartY	c; l; c;
+winchSpoolingFunctionTimes	0; 15;
+winchSpoolingFunctionControls	f; m;
+winchSpoolingFunctionVelocities	-0.5; 0.0;
+winchSpoolingFunctionAccelerations	0.0; 0.0;

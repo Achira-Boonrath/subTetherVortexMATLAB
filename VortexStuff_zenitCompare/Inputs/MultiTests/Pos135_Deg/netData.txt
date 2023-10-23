@@ -1,0 +1,16 @@
+NetSize	23
+wayPointsNb	0
+bendingPresentInNet	0
+netCGtype	0
+timeStartNetCG	0.0
+NetSideLength	22.0
+lengthKnotThread	0.0
+compression	0.05
+netRadius	0.0005
+netYoungModulus	70000000000
+netPoissonRatio	0.36
+netDensity	1390
+csiAxial	0.106
+csiBending	0.014
+Z	0.0
+netEjectionVelocity	0.0

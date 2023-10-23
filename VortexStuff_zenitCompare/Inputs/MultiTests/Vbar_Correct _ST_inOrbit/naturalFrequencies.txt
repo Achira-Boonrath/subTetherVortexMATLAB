@@ -1,0 +1,3 @@
+wn1Axial 	757.418
+wn1BendingRot 	1.25449
+wn1BendingTransl 	2.17284
