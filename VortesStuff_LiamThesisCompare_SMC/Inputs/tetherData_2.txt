@@ -1,0 +1,31 @@
+tetherFlexible	1
+collisionGeometry	2
+CLtetherControl	1
+tetherRadius	0.002
+tetherDensity	1390.0
+tetherYoungModulus	70000000000
+EImultiplier	1
+winchRadius	0.0
+winchMass	0.4
+winchHeight	0.14
+desiredRingsDistance	40
+Kp_max	0.3811
+Kd	0.002
+tension_ref	80.0
+spoolVelMax_deploy	4.0
+spoolVelMax_retrieve	4.0
+spoolVelMin_deploy	0.5
+maxAllowableTension	2000.0
+minAllowableLength	0.01
+initialControlTime	0.5
+ringsNb	18
+tethersNb	2
+prefSecLength_flex	0.10
+ringsPartX	c; l; t; c; q; 0; 0; 0; 0; c; 0; q; c; t; l; l; l; l;
+ringsPartY	c; l; l; l; l; l; t; c; q; c; 0; 0; 0; 0; 0; q; c; t;
+attachPartX	0; l;
+attachPartY	0; l;
+winchSpoolingFunctionTimes	0.0;
+winchSpoolingFunctionControls	f;
+winchSpoolingFunctionVelocities	0.0;
+winchSpoolingFunctionAccelerations	0.0;

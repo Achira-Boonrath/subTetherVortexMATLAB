@@ -1,0 +1,16 @@
+OSGview	1
+netModel	0
+CMsPresent	1
+tetherPresent	1
+nTethers	1
+targetPresent	1
+chaserPresent	1
+closingMechanismType	2
+stdClosingMechTime	15.0
+gravity	0.0
+finalTime	120.0
+tstep	0.001
+tsave	0.01
+tcontrol 0.001
+ScreenshotTime	1.0
+ResultsPath CornerMassVelAsym81\

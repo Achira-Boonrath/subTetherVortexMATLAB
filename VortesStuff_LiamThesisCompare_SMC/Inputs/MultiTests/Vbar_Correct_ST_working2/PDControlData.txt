@@ -1,0 +1,6 @@
+PDControl 	 0
+Direction 	 1
+ThrustConstant 	 2.5
+DesiredL	0.01
+Kp	300
+Kd	2000

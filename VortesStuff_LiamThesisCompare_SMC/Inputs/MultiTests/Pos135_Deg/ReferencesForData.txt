@@ -1,0 +1,12 @@
+VxReal netDensity = 1390; //kg/m3  Technora (Mortensen06)	
+VxReal netYoungModulus = 70000000000; //Pa     Technora (Mortensen06)
+VxReal csiAxial = 0.106;				// damping ratio, from Salvi
+VxReal csiBending = 0.014;				// damping ratio for bending, from Salvi
+
+From JGCD on capture of cylinder:
+- Coefficients for contact (poisson's ratio, young's modulus)
+- static friction coefficients: Kevlar-Kevlar pairs = Nylon-Nylon pairs 
+				Aluminum-Kevlar = Aluminum-Teflon pairs
+- kinetic friction coefficients: estimated by dividing the static ones by 1.25. 
+- contact stiffness of the net nodes was divided by 10 in order to balance the fact that the mass is lumped in the nodes.
+- linear stiffness of contact approx with max penetration. justied by the fact that, if damping is temporarily neglected, Fn = k*delta should approximate linearly Fn = k_nonlin*delta^1.5 while passing through zero.

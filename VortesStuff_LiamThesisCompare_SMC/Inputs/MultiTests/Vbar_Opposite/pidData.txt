@@ -1,0 +1,6 @@
+gainP 	 300.000000
+gainI 	 0.000000
+gainD 	 2000.000000
+deltaL 	 0.010000
+satLower 	 -5000.000000
+satUpper 	 10000.000000
