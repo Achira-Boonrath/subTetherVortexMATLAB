@@ -5,12 +5,38 @@ This folder contains MATLAB scripts and data files for simulating and analyzing 
 ## Main Project File
 
 ### `nehaST_MRAC_script.m`
-This is the primary script for running the simulation. It performs the following key functions:
-- **Initialization**: Sets up simulation parameters, including tether properties (stiffness, damping), chaser and target mass/inertia, and initial conditions.
-- **Optimization/Parameter Study**: Can be configured to run optimization loops or parameter studies (currently set up for single runs with specific `wIn` parameters).
-- **Dynamics Integration**: Solves the system equations of motion using `ode23`. It calls specific state derivative functions based on the selected control mode (`MRAC_v`).
-- **Post-Processing**: Calculates tension, elongation, thrust, and adaptive parameters after the simulation.
-- **Plotting**: Generates plots for tether elongation, thrust magnitude, adaptive parameters, and state variables.
+This is the primary entry point for running the simulation routines. While defined as a function accepting input parameters (`wIn`), it is often configured internally for standalone execution.
+
+#### Detailed Workflow
+1.  **Parameter Configuration**:
+    -   The script selects between different parameter sets (`wIn`) defining sub-tether stiffness, damping, and length.
+    -   It initializes the **Model Reference Adaptive Control (MRAC)** parameters based on the selected configuration.
+
+2.  **State Initialization (`s0`)**:
+    -   Constructs the initial state vector `s0` for the ODE solver, comprising:
+        -   **Chaser State** (Indices 1-13): Position, Velocity, Quaternion, Angular Velocity.
+        -   **Debris State** (Indices 14-26): Position, Velocity, Quaternion, Angular Velocity.
+        -   **Connection Point State** (Indices 27-32): Position, Velocity.
+        -   **Adaptive States** (Indices 33+): Estimates for system control parameters, initialized based on `MRAC_v` (Version 1 or 2).
+
+3.  **Simulation (ODE Integration)**:
+    -   Uses `ode23` to solve the equations of motion over the time span defined in `data.IntegrationTime`.
+    -   Switch logic (`MRAC_v`) determines which dynamics function is called:
+        -   `stateDeriv_withGrav_LiamSet_MRAC1_args_mex` (MRAC v1)
+        -   `stateDeriv_withGrav_LiamSet_AdaptiveLinear_args_mex` (MRAC v2)
+
+4.  **Post-Processing & Reconstruction**:
+    -   After integration, the script iterates through the time history to reconstruct control inputs not saved directly in the state vector.
+    -   Recomputes **Tether Tension** (`TmagST`) and **Control Thrust** (`FmagST`) by re-evaluating the system dynamics at each time step.
+    -   Calculates perturbations (e.g., J2 effect) to isolate the control effort.
+
+5.  **Analysis & Visualization**:
+    -   Computes the **Cost Function**: Root Mean Square Error (RMSE) between actual and desired tether elongation.
+    -   Generates plots for:
+        -   **Tether Elongation**: Comparing actual vs. desired/reference elongation.
+        -   **Thrust Profile**: Showing control effort.
+        -   **Adaptive Parameter Convergence**: Tracking system control parameters.
+    -   Saves results to `.mat` files (e.g., `subTetherMRAC_v2.mat`) and plots to `.png` files.
 
 ## Key Support Files
 
