@@ -1,4 +1,4 @@
-# Sub-Tether Vortex MATLAB Project
+# Sub-Tether Debris Removal with MRAC Elongation Control
 
 This folder contains MATLAB scripts and data files for simulating and analyzing a sub-tethered space debris removal system using Model Reference Adaptive Control (MRAC).
 
