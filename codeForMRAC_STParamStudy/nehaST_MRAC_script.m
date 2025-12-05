@@ -157,8 +157,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         
         % desired control profile %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.x1_m0 = 0.0;         args.tOnChaser_fromt0 = 0.0; 
-        args.slopeTime = 60;         args.desElong = 0.01;
-        % args.slopeTime = 1e-4;         args.desElong = 0.01;
+        % args.slopeTime = 60;         args.desElong = 0.01;
+        args.slopeTime = 1e-4;         args.desElong = 0.01;
         args.ThrustSaturation = 850;
         args.Kp = 6000; args.Kd = 9000;
         args.J2on = 0;
@@ -173,7 +173,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Set ODE solver options
         options = odeset('RelTol', 2e-8,'AbsTol', 2e-8,'Stats','off');
         % tspan = data.IntegrationTime(Idx0:IdxF) - data.IntegrationTime(Idx0); % Time span for integration
-        tspan = data.IntegrationTime(Idx0:(900+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
+        tspan = data.IntegrationTime(Idx0:(1200+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
         
         % Start timer for ODE solver
         tStart = tic; 
