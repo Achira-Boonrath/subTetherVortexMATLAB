@@ -33,7 +33,8 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     mrac_idx = idx_start + 6*N_mt_nodes;
     
     % Total states = 26 + 6*N + 7
-    ds = zeros(1, mrac_idx + 7 - 1);
+    %ds = zeros(1, mrac_idx + 7 - 1);
+    ds = zeros(1, mrac_idx + 9 - 1);
     
     Lc = chaserSideLength;
     
@@ -65,52 +66,54 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     Force_Chaser_Tether = zeros(3,1);
     Tvec_mt_seg1 = zeros(3,1); % For logic use
     
-    % Loop over N segments
+    % Vectorized Loop over N segments
     % Seg 1: Chaser -> Node 1
     % Seg k: Node k-1 -> Node k
-    for k = 1:N_mt_nodes
-        if k == 1
-            p_prev = pos_Att;
-            v_prev = vel_Att;
-        else
-            p_prev = nodes_pos(:, k-1);
-            v_prev = nodes_vel(:, k-1);
-        end
     
-        p_curr = nodes_pos(:, k);
-        v_curr = nodes_vel(:, k);
+    % Prep Pos/Vel Matrices for Predecessor (Prev) and Current (Curr) points
+    % Prev: [pos_Att, Node 1, Node 2 ... Node N-1]
+    P_prev = [pos_Att, nodes_pos(:, 1:end-1)];
+    V_prev = [vel_Att, nodes_vel(:, 1:end-1)];
     
-        l_vec = p_curr - p_prev;
-        l_mag = norm(l_vec);
-        e_vec = l_vec / l_mag;
-        vr_vec = v_curr - v_prev;
+    % Curr: [Node 1, Node 2 ... Node N]
+    P_curr = nodes_pos;
+    V_curr = nodes_vel;
     
-        Tvec = zeros(3,1);
+    % Vectorized Force Calc
+    L_vecs = P_curr - P_prev;
+    L_mags = sqrt(sum(L_vecs.^2, 1));
+    E_vecs = L_vecs ./ L_mags;
+    VR_vecs = V_curr - V_prev;
     
-        % Tension Calculation
-        if (l_mag > l0vec(1))
-            Tmag = Kvec(1)*(l_mag - l0vec(1)) + cVec(1)*dot(vr_vec, e_vec);
-            if Tmag > 0
-                Tvec = Tmag * e_vec;
-            end
-        end
+    deltas = L_mags - l0vec(1);
+    vr_dots = sum(VR_vecs .* E_vecs, 1);
     
-        % Apply Forces
-        % Tvec pulls 'curr' towards 'prev' (-Tvec on curr, +Tvec on prev)
-        Force_nodes(:, k) = Force_nodes(:, k) - Tvec;
+    Tmags = Kvec(1) .* deltas + cVec(1) .* vr_dots;
     
-        if k == 1
-            Force_Chaser_Tether = Force_Chaser_Tether + Tvec;
-            % Save Segment 1 info for Control Law
-            l_mt_seg1 = l_mag;
-            VR_mt_seg1 = vr_vec; % Node1 - Chaser
-            evec_mt_seg1 = e_vec;
-            Tvec_mt_seg1 = Tvec;
-            maskMTreal = (l_mag > l0vec(1)) && (norm(Tvec) > 0);
-        else
-            Force_nodes(:, k-1) = Force_nodes(:, k-1) + Tvec;
-        end
+    % Masks
+    maskLength = deltas > 0;
+    maskTension = Tmags > 0;
+    activeMask = maskLength & maskTension;
+    
+    Tmags(~activeMask) = 0;
+    Tvecs = E_vecs .* Tmags; % 3xN
+    
+    % Apply Forces
+    % Force on 'curr' (Node k) gets -Tvec (Pulls back to Prev)
+    Force_nodes = Force_nodes - Tvecs;
+    
+    % Force on 'prev' (Node k-1 or Chaser) gets +Tvec (Pulls fwd to Curr)
+    Force_Chaser_Tether = Force_Chaser_Tether + Tvecs(:, 1);
+    if N_mt_nodes > 1
+        Force_nodes(:, 1:end-1) = Force_nodes(:, 1:end-1) + Tvecs(:, 2:end);
     end
+    
+    % Capture Segment 1 info for Control logic
+    l_mt_seg1 = L_mags(1);
+    VR_mt_seg1 = VR_vecs(:,1);
+    evec_mt_seg1 = E_vecs(:,1);
+    Tvec_mt_seg1 = Tvecs(:,1);
+    maskMTreal = activeMask(1);
     
     % Gravity on Nodes
     m_node = massPoint1 / N_mt_nodes; % Distribute mass
@@ -121,7 +124,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     end
     
     %% Adaptive Control - Linear w/ dynamics inversion
-    
+    % s(mrac_idx:mrac_idx+6) = s(mrac_idx:mrac_idx+6)* args.ODEscale;
     x1_m = s(mrac_idx);
     x1dot_m = s(mrac_idx+1);
     hhat = s(mrac_idx+2);
@@ -194,11 +197,12 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     clipped_delta = min(max(delta, -ThrustSaturation), ThrustSaturation);
     Fthrust = clipped_delta * ( rotMat_C_A_I' * [0.0,0.0,1.0]' );
     
-    maskFT = 0;%((abs(delta)+ 1e-1)*(abs(delta)+ 1e-1) < ThrustSaturation*ThrustSaturation );
+    maskFT = ((abs(delta)+ 1e-1)*(abs(delta)+ 1e-1) < ThrustSaturation*ThrustSaturation );
     ds(mrac_idx+2) = Kr_hat_dot*double(maskFT);
     ds(mrac_idx+3:mrac_idx+4) = Kx_hat_dot*double(maskFT);
     ds(mrac_idx+5:mrac_idx+6) = Theta_hat_dot*double(maskFT);
-    
+    ds(mrac_idx+7:mrac_idx+8) = [x1dot, clipped_delta];
+
     %% with gravity;
     J2 = 1.08263e-3;
     rEarth = 6378.0e3;
@@ -292,10 +296,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     Force_nodes(:, N_mt_nodes) = Force_nodes(:, N_mt_nodes) - sum(Tvec_st, 2);
     
     % Calculate Accelerations for all Nodes
-    nodes_acc = zeros(3, N_mt_nodes);
-    for i = 1:N_mt_nodes
-        nodes_acc(:, i) = Force_nodes(:, i) / m_node;
-    end
+    nodes_acc = Force_nodes / m_node;
     
     %%
     
@@ -315,11 +316,8 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     ds(24:26) = omegaDotTarget; %ang acc
     
     %nodes state derivatives
-    for i = 1:N_mt_nodes
-        idx = idx_start + (i-1)*6;
-        ds(idx : idx+2) = nodes_vel(:, i);
-        ds(idx+3 : idx+5) = nodes_acc(:, i);
-    end
+    temp_node_states = [nodes_vel; nodes_acc]; % 6 x N
+    ds(idx_start : idx_start + 6*N_mt_nodes - 1) = temp_node_states(:);
     
     % Scale back
     ds(1:6)   = ds(1:6  ) / args.ODEscale;
@@ -327,7 +325,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
     % ds(27:32) = ds(27:32) / args.ODEscale;
     % Scale N nodes
     ds(idx_start : idx_start + 6*N_mt_nodes - 1) = ds(idx_start : idx_start + 6*N_mt_nodes - 1) / args.ODEscale;
-    
+    % ds(mrac_idx:mrac_idx+6) = ds(mrac_idx:mrac_idx+6) / args.ODEscale;
     ds= ds';
 
 end

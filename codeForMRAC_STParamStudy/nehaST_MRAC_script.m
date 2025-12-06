@@ -44,12 +44,12 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     l0_mt = data.inertialMTParams(end);
     threadDamping = 10^(wIn(3)*3.5); % Compute damping coefficient
     threadStiffness = 10^(wIn(1)*3.5); % Compute stiffness coefficient
-
+    
     % Define bounds for sub-tether length
     L_min = 5.5; L_max = 9.5;
     lb = L_min; ub = L_max; % Lower and upper bounds
     l0_st = wIn(2)*(ub - lb) +  lb; % Compute sub-tether length
-
+    
     % Define vectors for tether parameters
     l0vec = [l0_mt/(N_mt_nodes+0),...
         l0_st*ones(1,4)]; % Initial lengths
@@ -57,7 +57,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
     cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0), ...%*(N_mt_nodes+0), ...
         threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
-
+    
     %% Expand s0 for N nodes
     s0_chaser = s0(1:13);
     s0_target = s0(14:26);
@@ -86,7 +86,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % Define MRAC Start Index
     idx_nodes_start = 27;
     mrac_idx = idx_nodes_start + 6*N_mt_nodes %+ 1;
-
+    
     for GG = [1]
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
@@ -117,6 +117,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             s0(mrac_idx+3) = 1.0 * Kvec(1);
             s0(mrac_idx+4) = 1.0 * cVec(1);
             s0(mrac_idx+5:mrac_idx+6) = [0, 0];
+            s0(mrac_idx+7:mrac_idx+8) = [0, 0];
     
             % Good 1
             args.L0 = 15*0.9;
@@ -161,21 +162,22 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
             % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %$\hat{k}_r $
-            s0(mrac_idx+2) = 37500;
+            s0(mrac_idx+2) = 37500*(N_mt_nodes+0);
             %$\hat{\mathbf{K}}_z=[\hat{k}_{z,1}, \hat{k}_{z,2}]^T$
-            s0(mrac_idx+3:mrac_idx+4) = -1*[37500, 56250];
+            s0(mrac_idx+3:mrac_idx+4) = -1*[37500, 56250]*(N_mt_nodes+0);
             %$\hat{{\boldsymbol{\Theta}}} =[\hat{{\boldsymbol{\Theta}}}_{1}, \hat{{\boldsymbol{\Theta}}}_{2}]^T$
-            s0(mrac_idx+5:mrac_idx+6) = -0.5*[30925, 14.78];
+            s0(mrac_idx+5:mrac_idx+6) = -0.5*[30925, 14.78]*(N_mt_nodes+0);
+            s0(mrac_idx+7:mrac_idx+8) = [0, 0];
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-            args.Gamma_x = [[5e+7 ,   0];       [  0 ,  5e+7]];
-            args.Gamma_r = 4.1e+10;
-            args.Gamma_theta = [[5e+7,   0];       [  0 ,  1e+4]];
+            args.Gamma_x = 25.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
+            args.Gamma_r = 25.0*4.1e+10;
+            args.Gamma_theta = 25.0*[[5e+7,   0];       [  0 ,  1e+4]];
             args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
             args.B_linear = [0, 1/chaserM]';
-            args.sigmaMRACLin = 0.000003;
+            args.sigmaMRACLin = 1.0*0.000003;
         end
-
+    
         %% Set Sim Params
         % system params %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.massPoint1= massPoint1;
@@ -209,6 +211,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
         l_seg1 = norm(pos_Node1 - pos_Att);
         s0(mrac_idx) = l_seg1 - l0vec(1);
+        s0(mrac_idx+7:mrac_idx+8) = [l_seg1 - l0vec(1), 0];
     
         ODEscale = 1000;
         args.ODEscale = ODEscale;
@@ -218,6 +221,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         idx_nodes_start = 27;
         idx_nodes_end = 26 + 6 * N_mt_nodes;
         s0(idx_nodes_start:idx_nodes_end) = s0(idx_nodes_start:idx_nodes_end) / ODEscale;
+        % s0(mrac_idx+1:mrac_idx+6) = s0(mrac_idx+1:mrac_idx+6)/ ODEscale;
     
         %% Solve ODE for System Dynamics
     
@@ -246,6 +250,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         idx_nodes_start = 27;
         idx_nodes_end = 26 + 6 * N_mt_nodes;
         state_vec(:, idx_nodes_start:idx_nodes_end) = state_vec(:, idx_nodes_start:idx_nodes_end) * ODEscale;
+        % state_vec(:,mrac_idx+1:mrac_idx+6) = state_vec(:,mrac_idx+1:mrac_idx+6) * ODEscale;
     
         %% Extract Quantities from ODE Outputs
         idx_mrac_start = mrac_idx;
@@ -282,10 +287,6 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
         % compute alignment angle and elongation for the MT
         % Check if postAlignAng handles N nodes? It takes X3, Y3 so it treats MT as Chaser->NodeN line.
-        % Technically alignment angle should be for the last segment? Or average?
-        % Original code: Chaser -> Point1.
-        % We pass X3 (Node N). So it computes Chaser -> Node N alignment.
-        % This is acceptable as "Main Tether Alignment".
         [alignAng, elong_mt] = postAlignAng(state_vec(:, 1:13), state_vec(:, 14:26), X3 ,Y3 ,Z3, VX3 ,VY3 ,VZ3, chaserSideLength, 0,...
             Kvec/(N_mt_nodes+0), l0vec*(N_mt_nodes+0), cVec/(N_mt_nodes+0), muEarth, FT_const);
     
@@ -390,7 +391,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % subplot(2, 1, 2)
             % Plot MT Elongation and Thrust Force %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             subplot(2, 1, 1)
-            plot(t_plot, elong_mt(1:tSkip:end))
+            % plot(t_plot, elong_mt(1:tSkip:end))
+            plot(t_plot, state_vec(1:tSkip:end, end-1),"--")
             hold on;
             % yline(0.01)
             plot(t_plot, state_vec(1:tSkip:end, idx_mrac_start),"--")
@@ -400,7 +402,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             ylabel("MT Elongation, m", 'fontsize', 13,'interpreter','latex')
             grid minor;
             subplot(2, 1, 2)
-            plot(t_plot, FmagST(1:tSkip:end))
+            % plot(t_plot, FmagST(1:tSkip:end))
+            plot(t_plot, 10*[0,diff( state_vec(1:tSkip:end, end) )'])
             ylim([0 900])
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("$|F_T|$ N", 'fontsize', 13,'interpreter','latex')
@@ -459,7 +462,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
         % cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
     end
-    % cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
+% cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
 end
 
 
