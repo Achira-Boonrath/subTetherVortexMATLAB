@@ -91,7 +91,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
         fbControl = 'MRAC';
-        MRAC_v = 2; % Version of MRAC being used
+        MRAC_v = 1; % Version of MRAC being used
     
         % Set thrust magnitude from MRAC parameters
         FT_const = dataMRAC.MRACparams(8);
@@ -162,20 +162,20 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
             % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %$\hat{k}_r $
-            s0(mrac_idx+2) = 37500*(N_mt_nodes+0);
+            s0(mrac_idx+2) = 37500*(N_mt_nodes+2);
             %$\hat{\mathbf{K}}_z=[\hat{k}_{z,1}, \hat{k}_{z,2}]^T$
-            s0(mrac_idx+3:mrac_idx+4) = -1*[37500, 56250]*(N_mt_nodes+0);
+            s0(mrac_idx+3:mrac_idx+4) = -1*[37500, 56250]*(N_mt_nodes+2);
             %$\hat{{\boldsymbol{\Theta}}} =[\hat{{\boldsymbol{\Theta}}}_{1}, \hat{{\boldsymbol{\Theta}}}_{2}]^T$
             s0(mrac_idx+5:mrac_idx+6) = -0.5*[30925, 14.78]*(N_mt_nodes+0);
             s0(mrac_idx+7:mrac_idx+8) = [0, 0];
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
             args.Gamma_x = 25.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
-            args.Gamma_r = 25.0*4.1e+10;
+            args.Gamma_r = 25.0*5.1e+10;
             args.Gamma_theta = 25.0*[[5e+7,   0];       [  0 ,  1e+4]];
             args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
             args.B_linear = [0, 1/chaserM]';
-            args.sigmaMRACLin = 1.0*0.000003;
+            args.sigmaMRACLin = 0*0.000003;
         end
     
         %% Set Sim Params
@@ -234,7 +234,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         tStart = tic;
         % Solve the system of ODEs using ode23
         if MRAC_v == 1
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args_mex(t,s,args), tspan, s0, options);
+            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args(t,s,args), tspan, s0, options);
         else
             [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s,args), tspan, s0, options);
         end
@@ -304,7 +304,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % Compute the state derivative at the current time step based on the MRAC version
             if MRAC_v == 1
                 % Use MRAC-1 model for state derivative computation
-                ds_k = stateDeriv_withGrav_LiamSet_MRAC1_args_mex(t_mod_code2(k), state_vec(k, :)', args);
+                ds_k = stateDeriv_withGrav_LiamSet_MRAC1_args(t_mod_code2(k), state_vec(k, :)', args);
             else
                 % Use Adaptive Linear model for state derivative computation
                 ds_k = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t_mod_code2(k), state_vec(k, :)', args);
@@ -396,7 +396,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             hold on;
             % yline(0.01)
             plot(t_plot, state_vec(1:tSkip:end, idx_mrac_start),"--")
-            ylim([0 0.03])
+            % ylim([0 0.03])
             legend("Actual","Desired")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("MT Elongation, m", 'fontsize', 13,'interpreter','latex')
