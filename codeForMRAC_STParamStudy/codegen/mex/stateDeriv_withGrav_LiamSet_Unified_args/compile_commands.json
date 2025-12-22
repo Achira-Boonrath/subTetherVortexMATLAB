@@ -1,0 +1,188 @@
+[
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   stateDeriv_withGrav_LiamSet_Unified_args_data.c /Fobuild\\win64\\stateDeriv_withGrav_LiamSet_Unified_args_data.obj",
+    "file": "stateDeriv_withGrav_LiamSet_Unified_args_data.c",
+    "output": "build/win64/stateDeriv_withGrav_LiamSet_Unified_args_data.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   rt_nonfinite.c /Fobuild\\win64\\rt_nonfinite.obj",
+    "file": "rt_nonfinite.c",
+    "output": "build/win64/rt_nonfinite.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   stateDeriv_withGrav_LiamSet_Unified_args_initialize.c /Fobuild\\win64\\stateDeriv_withGrav_LiamSet_Unified_args_initialize.obj",
+    "file": "stateDeriv_withGrav_LiamSet_Unified_args_initialize.c",
+    "output": "build/win64/stateDeriv_withGrav_LiamSet_Unified_args_initialize.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   stateDeriv_withGrav_LiamSet_Unified_args_terminate.c /Fobuild\\win64\\stateDeriv_withGrav_LiamSet_Unified_args_terminate.obj",
+    "file": "stateDeriv_withGrav_LiamSet_Unified_args_terminate.c",
+    "output": "build/win64/stateDeriv_withGrav_LiamSet_Unified_args_terminate.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   stateDeriv_withGrav_LiamSet_Unified_args.c /Fobuild\\win64\\stateDeriv_withGrav_LiamSet_Unified_args.obj",
+    "file": "stateDeriv_withGrav_LiamSet_Unified_args.c",
+    "output": "build/win64/stateDeriv_withGrav_LiamSet_Unified_args.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   sum.c /Fobuild\\win64\\sum.obj",
+    "file": "sum.c",
+    "output": "build/win64/sum.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   sumMatrixIncludeNaN.c /Fobuild\\win64\\sumMatrixIncludeNaN.obj",
+    "file": "sumMatrixIncludeNaN.c",
+    "output": "build/win64/sumMatrixIncludeNaN.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   assertCompatibleDims.c /Fobuild\\win64\\assertCompatibleDims.obj",
+    "file": "assertCompatibleDims.c",
+    "output": "build/win64/assertCompatibleDims.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   norm.c /Fobuild\\win64\\norm.obj",
+    "file": "norm.c",
+    "output": "build/win64/norm.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   calculateAdaptiveControl_Unified.c /Fobuild\\win64\\calculateAdaptiveControl_Unified.obj",
+    "file": "calculateAdaptiveControl_Unified.c",
+    "output": "build/win64/calculateAdaptiveControl_Unified.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   dot.c /Fobuild\\win64\\dot.obj",
+    "file": "dot.c",
+    "output": "build/win64/dot.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   rotm2quat.c /Fobuild\\win64\\rotm2quat.obj",
+    "file": "rotm2quat.c",
+    "output": "build/win64/rotm2quat.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   anyNonFinite.c /Fobuild\\win64\\anyNonFinite.obj",
+    "file": "anyNonFinite.c",
+    "output": "build/win64/anyNonFinite.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xnrm2.c /Fobuild\\win64\\xnrm2.obj",
+    "file": "xnrm2.c",
+    "output": "build/win64/xnrm2.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   warning.c /Fobuild\\win64\\warning.obj",
+    "file": "warning.c",
+    "output": "build/win64/warning.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   schur.c /Fobuild\\win64\\schur.obj",
+    "file": "schur.c",
+    "output": "build/win64/schur.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   mldivide.c /Fobuild\\win64\\mldivide.obj",
+    "file": "mldivide.c",
+    "output": "build/win64/mldivide.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   interface\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.c /Fobuild\\win64\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.obj",
+    "file": "interface/_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.c",
+    "output": "build/win64/_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   interface\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.c /Fobuild\\win64\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.obj",
+    "file": "interface/_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.c",
+    "output": "build/win64/_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   eml_int_forloop_overflow_check.c /Fobuild\\win64\\eml_int_forloop_overflow_check.obj",
+    "file": "eml_int_forloop_overflow_check.c",
+    "output": "build/win64/eml_int_forloop_overflow_check.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   sqrt.c /Fobuild\\win64\\sqrt.obj",
+    "file": "sqrt.c",
+    "output": "build/win64/sqrt.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xscal.c /Fobuild\\win64\\xscal.obj",
+    "file": "xscal.c",
+    "output": "build/win64/xscal.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xzlarf.c /Fobuild\\win64\\xzlarf.obj",
+    "file": "xzlarf.c",
+    "output": "build/win64/xzlarf.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xhseqr.c /Fobuild\\win64\\xhseqr.obj",
+    "file": "xhseqr.c",
+    "output": "build/win64/xhseqr.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xzlarfg.c /Fobuild\\win64\\xzlarfg.obj",
+    "file": "xzlarfg.c",
+    "output": "build/win64/xzlarfg.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xdlanv2.c /Fobuild\\win64\\xdlanv2.obj",
+    "file": "xdlanv2.c",
+    "output": "build/win64/xdlanv2.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   xrot.c /Fobuild\\win64\\xrot.obj",
+    "file": "xrot.c",
+    "output": "build/win64/xrot.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   div.c /Fobuild\\win64\\div.obj",
+    "file": "div.c",
+    "output": "build/win64/div.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   stateDeriv_withGrav_LiamSet_Unified_args_emxutil.c /Fobuild\\win64\\stateDeriv_withGrav_LiamSet_Unified_args_emxutil.obj",
+    "file": "stateDeriv_withGrav_LiamSet_Unified_args_emxutil.c",
+    "output": "build/win64/stateDeriv_withGrav_LiamSet_Unified_args_emxutil.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   interface\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.c /Fobuild\\win64\\_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.obj",
+    "file": "interface/_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.c",
+    "output": "build/win64/_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.obj"
+  },
+  {
+    "directory": "D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\\codegen\\mex\\stateDeriv_withGrav_LiamSet_Unified_args",
+    "command": "cl /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I \".\" /I \"D:\\CM Labs\\subTetherVortexMATLAB\\codeForMRAC_STParamStudy\" /I \".\\interface\" /I \"C:\\Program Files\\MATLAB\\R2024b\\extern\\include\" /I \".\" -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex   \"C:\\Program Files\\MATLAB\\R2024b\\extern\\version\\c_mexapi_version.c\" /Fobuild\\win64\\c_mexapi_version.obj",
+    "file": "C:/Program Files/MATLAB/R2024b/extern/version/c_mexapi_version.c",
+    "output": "build/win64/c_mexapi_version.obj"
+  }
+]

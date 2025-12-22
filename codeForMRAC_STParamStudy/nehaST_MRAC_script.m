@@ -16,8 +16,9 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % set lower and upper bounds of the decision variables
     %lb = L_min; ub = L_max;
     %l0_st = wIn(2)*(ub - lb) +  lb;
-    wIn = [0.923832631579215   0.153706128897234   0.818002917495584];
-    
+    % wIn = [0.923832631579215   0.153706128897234   0.818002917495584];
+    wIn = [0.923832631579215   0.153706128897234   0.818002917495584, 0.923832631579215   0.153706128897234   0.818002917495584];
+
     %% opt combo 2
     %threadDamping = 10^(wIn(3)*3.5);
     %threadStiffness = 10^(wIn(1)*3.5);
@@ -38,25 +39,71 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     N_mt_nodes = 10;
     args.N_mt_nodes = N_mt_nodes;
     
-    %% Set Sub-Tether Parameters
+    %% Set Sub-Tether Parameters, uniform prop.
     
-    % Extract main tether (MT) parameters from data
+    % % Extract main tether (MT) parameters from data
+    % l0_mt = data.inertialMTParams(end);
+    % threadDamping = 10^(wIn(3)*3.5); % Compute damping coefficient
+    % threadStiffness = 10^(wIn(1)*3.5); % Compute stiffness coefficient
+    
+    % % Define bounds for sub-tether length
+    % L_min = 5.5; L_max = 9.5;
+    % lb = L_min; ub = L_max; % Lower and upper bounds
+    % l0_st = wIn(2)*(ub - lb) +  lb; % Compute sub-tether length
+    
+    % % Define vectors for tether parameters
+    % l0vec = [l0_mt/(N_mt_nodes+0),...
+    %     l0_st*ones(1,4)]; % Initial lengths
+    % Kvec = [data.inertialMTParams(end-2)*(N_mt_nodes+0), ...%*(N_mt_nodes+0), ...
+    %     threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
+    % cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0), ...%*(N_mt_nodes+0), ...
+    %     threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
+    
+    %% Set Sub-Tether Parameters, 2 sets prop.
+    
+    % w = [0.591380499683838   0.360307076675448
+    % 0.715099717374416   0.999705515505944   0.001787551  0]
+    % good for this set
+    
+    % w = [0.432485938760449   0.062052793649910   0.3718031160
+    % 0.608740022837633   0.116165537599269   0.024961570474249
+    % good for angled target
+    
+    % Initial Guess and bounds
+    % For s_1
+    k_initial= 2; k_min = 1; k_max = 600;
+    % For s_2
+    L_initial= 12; L_min = 5.5; L_max = 9.5;
+    % For s_3
+    D_initial= 1; D_min = 1; D_max = 600;
+    
+    % set lower and upper bounds of the decision variables
+    lb = [k_min, L_min, D_min];ub = [k_max, L_max, D_max];
+    
+    % threadStiffness = wIn(1)*(ub(1) - lb(1)) +  lb(1);
+    l0_1 = wIn(2)*(ub(2) - lb(2)) +  lb(2);
+    % threadDamping = wIn(3)*(ub(3) - lb(3)) +  lb(3);
+    l0_2 = l0_1;
+    
+    l0_3 = wIn(5)*(ub(2) - lb(2)) +  lb(2);
+    l0_4 = l0_3;
+    
+    threadDamping = 10^( 3.5*wIn(3) );
+    threadStiffness = 10^( 3.5*wIn(1) );
+    
+    threadDamping_3 = 10^( 3.5*wIn(6) );
+    threadStiffness_3 = 10^( 3.5*wIn(4) );
+    
     l0_mt = data.inertialMTParams(end);
-    threadDamping = 10^(wIn(3)*3.5); % Compute damping coefficient
-    threadStiffness = 10^(wIn(1)*3.5); % Compute stiffness coefficient
     
-    % Define bounds for sub-tether length
-    L_min = 5.5; L_max = 9.5;
-    lb = L_min; ub = L_max; % Lower and upper bounds
-    l0_st = wIn(2)*(ub - lb) +  lb; % Compute sub-tether length
-    
-    % Define vectors for tether parameters
     l0vec = [l0_mt/(N_mt_nodes+0),...
-        l0_st*ones(1,4)]; % Initial lengths
-    Kvec = [data.inertialMTParams(end-2)*(N_mt_nodes+0), ...%*(N_mt_nodes+0), ...
-        threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
-    cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0), ...%*(N_mt_nodes+0), ...
-        threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
+        l0_1,l0_2,l0_3,l0_4];
+    % vector of unstretched length, MT then 4 STs
+    Kvec = [data.inertialMTParams(end-2)*(N_mt_nodes+0),...
+        threadStiffness, threadStiffness, threadStiffness_3, threadStiffness_3];
+    % vector of damping values, MT then 4 STs
+    cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0),...
+        threadDamping,threadDamping,threadDamping_3,threadDamping_3];
     
     %% Expand s0 for N nodes
     s0_chaser = s0(1:13);
@@ -107,6 +154,51 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Compute relative velocity between connection point and chaser attachment point
         VR_mt = states0_connPoint1(4:6) - (vel0chaser + rotMat_C_A_I' * (cross(omega0chaser, distAttPt_to_C)));
     
+        %% Save control params to args
+        % Good 1
+        args.L0 = 15*0.9;
+        args.kA = 1*chaserM*3.8*(1.1);
+        args.gamma = 30;
+        args.sigmaMRAC_h  = 0.05; %1.0e+03; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
+        args.sigmaMRAC_a1 = 0.0005; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
+        args.sigmaMRAC_a2 = 0.05; %0.25 * 0.01 *3*4.0*(args.L0/15.0);
+        
+        % wIn2=[0.687367280667017                   0   0.489991127634287]; % opt solu 1
+        % lb1 = 15*0.6; ub1 = 15*1.1;
+        % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
+        % lb2 = chaserM*3.8*(1.0); ub2 = chaserM*3.8*(2.0);
+        % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
+        % lb3 = 27; ub3 = 33;
+        % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
+        
+        % wIn2=[0   0.101953473828612   0.972077265457035]; % opt solu 2
+        % lb1 = 15*0.7; ub1 = 15*1.1;
+        % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
+        % lb2 = chaserM*3.8*(0.8); ub2 = chaserM*3.8*(1.5);
+        % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
+        % lb3 = 28; ub3 = 32;
+        % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
+        
+        % wIn2=[0.761115429591623   0.800889939488221                   0]; % opt solu 3
+        % lb1 = 15*0.5; ub1 = 15*1.0;
+        % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
+        % lb2 = chaserM*3.8*(0.9); ub2 = chaserM*3.8*(1.5);
+        % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
+        % lb3 = 28; ub3 = 32;
+        % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
+        
+        args.sigmaMRAC_h  = (args.gamma/30)*0.05;
+        args.sigmaMRAC_a1 = (args.gamma/30)*0.0005;
+        args.sigmaMRAC_a2 = (args.gamma/30)*0.05;
+
+        args.Gamma_x = 35.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
+        args.Gamma_r = 35.0*150e+10;
+        args.Gamma_theta = 35.0*[[5e+7,   0];       [  0 ,  1e+4]];
+        args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
+        args.B_linear = [0, 1/chaserM]';
+        args.sigmaMRACLin = 0*0.000003;
+
+        %%
         if MRAC_v == 1
             % Initialize adaptive states for the ODE solver - MRAC-1
             % s0(mrac_idx) = (l_seg1 - l0_seg1); % Calculated later
@@ -118,43 +210,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             s0(mrac_idx+4) = 1.0 * cVec(1);
             s0(mrac_idx+5:mrac_idx+6) = [0, 0];
             s0(mrac_idx+7:mrac_idx+8) = [0, 0];
-    
-            % Good 1
-            args.L0 = 15*0.9;
-            args.kA = 1*chaserM*3.8*(1.1);
-            args.gamma = 30;
-            args.sigmaMRAC_h  = 0.05; %1.0e+03; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
-            args.sigmaMRAC_a1 = 0.0005; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
-            args.sigmaMRAC_a2 = 0.05; %0.25 * 0.01 *3*4.0*(args.L0/15.0);
-    
-            % wIn2=[0.687367280667017                   0   0.489991127634287]; % opt solu 1
-            % lb1 = 15*0.6; ub1 = 15*1.1;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(1.0); ub2 = chaserM*3.8*(2.0);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 27; ub3 = 33;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
-    
-            % wIn2=[0   0.101953473828612   0.972077265457035]; % opt solu 2
-            % lb1 = 15*0.7; ub1 = 15*1.1;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(0.8); ub2 = chaserM*3.8*(1.5);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 28; ub3 = 32;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
-    
-            % wIn2=[0.761115429591623   0.800889939488221                   0]; % opt solu 3
-            % lb1 = 15*0.5; ub1 = 15*1.0;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(0.9); ub2 = chaserM*3.8*(1.5);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 28; ub3 = 32;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
-    
-            args.sigmaMRAC_h  = (args.gamma/30)*0.05;
-            args.sigmaMRAC_a1 = (args.gamma/30)*0.0005;
-            args.sigmaMRAC_a2 = (args.gamma/30)*0.05;
-    
+
         else
             % Initialize adaptive states for the ODE solver - MRAC-2
             % s0(mrac_idx) = (l_mt - l0vec(1)); % Calculated later
@@ -169,13 +225,6 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             s0(mrac_idx+5:mrac_idx+6) = -0.5*[30925, 14.78]*(N_mt_nodes+0);
             s0(mrac_idx+7:mrac_idx+8) = [0, 0];
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-            args.Gamma_x = 35.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
-            args.Gamma_r = 35.0*150e+10;
-            args.Gamma_theta = 35.0*[[5e+7,   0];       [  0 ,  1e+4]];
-            args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
-            args.B_linear = [0, 1/chaserM]';
-            args.sigmaMRACLin = 0*0.000003;
         end
     
         %% Set Sim Params
@@ -200,6 +249,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         args.ThrustSaturation = 850;
         args.Kp = 6000; args.Kd = 9000;
         args.J2on = 0;
+    
+        args.MRAC_v = MRAC_v;
         %% Solve ODE for System Dynamics
     
         % Recalculate MRAC initial state (Error x1) for Segment 1
@@ -233,11 +284,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Start timer for ODE solver
         tStart = tic;
         % Solve the system of ODEs using ode23
-        if MRAC_v == 1
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args(t,s,args), tspan, s0, options);
-        else
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s,args), tspan, s0, options);
-        end
+        [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_Unified_args_mex(t,s,args), tspan, s0, options);
     
         % Measure time taken for integration
         t_ode45 = toc(tStart);
@@ -302,13 +349,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             TmagST(k) = norm([Tx(k, 1), Ty(k, 1), Tz(k, 1)]);
     
             % Compute the state derivative at the current time step based on the MRAC version
-            if MRAC_v == 1
-                % Use MRAC-1 model for state derivative computation
-                ds_k = stateDeriv_withGrav_LiamSet_MRAC1_args(t_mod_code2(k), state_vec(k, :)', args);
-            else
-                % Use Adaptive Linear model for state derivative computation
-                ds_k = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t_mod_code2(k), state_vec(k, :)', args);
-            end
+            ds_k = stateDeriv_withGrav_LiamSet_Unified_args(t_mod_code2(k), state_vec(k, :)', args);
     
             % Define constants for Earth's gravitational and J2 perturbation effects
             J2 = 1.08263e-3;            % Earth's J2 coefficient
@@ -462,7 +503,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
         % cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
     end
-% cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
+    % cost = rmse(elong_mt_Python(1:700), elong_mt(1:700)); % param ID
 end
 
 

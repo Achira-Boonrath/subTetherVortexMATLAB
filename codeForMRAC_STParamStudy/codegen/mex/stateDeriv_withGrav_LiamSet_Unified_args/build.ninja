@@ -1,0 +1,76 @@
+# CompilerName=msvc170
+# Mode=optim
+ninja_required_version = 1.3
+
+# Basic folders
+root = .
+builddir = $root\build\win64
+matlabdir = C:\Program Files\MATLAB\R2024b
+startdir = D:\CM Labs\subTetherVortexMATLAB\codeForMRAC_STParamStudy
+
+# Toolchain information
+cc = cl
+cxx = cl
+linker = link
+linkerxx = link
+
+cflags =  /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I "$root" /I "$startdir" /I "$root\interface" /I "$matlabdir\extern\include" /I "." -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex  
+
+cxxflags =  /c /Zc:__cplusplus /Zp8 /GR /W3 /EHs /nologo /MD /D_CRT_SECURE_NO_DEPRECATE /D_SCL_SECURE_NO_DEPRECATE /D_SECURE_SCL=0   /DMATLAB_MEX_FILE  /DMATLAB_MEX_FILE /O2 /Oy- /DNDEBUG /fp:strict /utf-8 /I "$root" /I "$startdir" /I "$root\interface" /I "$matlabdir\extern\include" /I "." -DHAVE_LAPACK_CONFIG_H -DLAPACK_COMPLEX_STRUCTURE -DMW_HAVE_LAPACK_DECLS -DMODEL=stateDeriv_withGrav_LiamSet_Unified_args_mex  
+
+ldflags =  /nologo    /DLL /LIBPATH:"$matlabdir\extern\lib\win64\microsoft" libmx.lib libmex.lib libmat.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib  /out:"stateDeriv_withGrav_LiamSet_Unified_args_mex.mexw64" /LIBPATH:"$matlabdir\extern\lib\win64\microsoft" libmwblas.lib libmwlapack.lib libemlrt.lib libcovrt.lib libut.lib libmwmathutil.lib  /export:mexFunction /export:mexfilerequiredapiversion /export:emlrtMexFcnProperties /export:stateDeriv_withGrav_LiamSet_Unified_args /export:stateDeriv_withGrav_LiamSet_Unified_args_initialize /export:stateDeriv_withGrav_LiamSet_Unified_args_terminate /export:stateDeriv_withGrav_LiamSet_Unified_args_atexit /export:emxEnsureCapacity_boolean_T /export:emxFree_boolean_T /export:emxInit_boolean_T /export:emxEnsureCapacity_real_T /export:emxFree_real_T /export:emxInit_real_T
+
+ldxxflags =  /nologo    /DLL /LIBPATH:"$matlabdir\extern\lib\win64\microsoft" libmx.lib libmex.lib libmat.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib libMatlabDataArray.lib libMatlabEngine.lib  /out:"stateDeriv_withGrav_LiamSet_Unified_args_mex.mexw64" /LIBPATH:"$matlabdir\extern\lib\win64\microsoft" libmwblas.lib libmwlapack.lib libemlrt.lib libcovrt.lib libut.lib libmwmathutil.lib  /export:mexFunction /export:mexfilerequiredapiversion /export:emlrtMexFcnProperties /export:stateDeriv_withGrav_LiamSet_Unified_args /export:stateDeriv_withGrav_LiamSet_Unified_args_initialize /export:stateDeriv_withGrav_LiamSet_Unified_args_terminate /export:stateDeriv_withGrav_LiamSet_Unified_args_atexit /export:emxEnsureCapacity_boolean_T /export:emxFree_boolean_T /export:emxInit_boolean_T /export:emxEnsureCapacity_real_T /export:emxFree_real_T /export:emxInit_real_T
+
+linkobjs = 
+
+# Build Rules
+rule cc
+    command = $cc $cflags $in /Fo$out
+
+rule cxx
+    command = $cxx $cxxflags $in /Fo$out
+
+rule link
+    command = $linker @$out.rsp $linkobjs $ldflags
+    rspfile = $out.rsp
+    rspfile_content = $in
+
+rule linkxx
+    command = $linkerxx $in $linkobjs $ldxxflags
+
+# Build
+build $builddir\stateDeriv_withGrav_LiamSet_Unified_args_data.obj : cc $root\stateDeriv_withGrav_LiamSet_Unified_args_data.c
+build $builddir\rt_nonfinite.obj : cc $root\rt_nonfinite.c
+build $builddir\stateDeriv_withGrav_LiamSet_Unified_args_initialize.obj : cc $root\stateDeriv_withGrav_LiamSet_Unified_args_initialize.c
+build $builddir\stateDeriv_withGrav_LiamSet_Unified_args_terminate.obj : cc $root\stateDeriv_withGrav_LiamSet_Unified_args_terminate.c
+build $builddir\stateDeriv_withGrav_LiamSet_Unified_args.obj : cc $root\stateDeriv_withGrav_LiamSet_Unified_args.c
+build $builddir\sum.obj : cc $root\sum.c
+build $builddir\sumMatrixIncludeNaN.obj : cc $root\sumMatrixIncludeNaN.c
+build $builddir\assertCompatibleDims.obj : cc $root\assertCompatibleDims.c
+build $builddir\norm.obj : cc $root\norm.c
+build $builddir\calculateAdaptiveControl_Unified.obj : cc $root\calculateAdaptiveControl_Unified.c
+build $builddir\dot.obj : cc $root\dot.c
+build $builddir\rotm2quat.obj : cc $root\rotm2quat.c
+build $builddir\anyNonFinite.obj : cc $root\anyNonFinite.c
+build $builddir\xnrm2.obj : cc $root\xnrm2.c
+build $builddir\warning.obj : cc $root\warning.c
+build $builddir\schur.obj : cc $root\schur.c
+build $builddir\mldivide.obj : cc $root\mldivide.c
+build $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.obj : cc $root\interface\_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.c
+build $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.obj : cc $root\interface\_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.c
+build $builddir\eml_int_forloop_overflow_check.obj : cc $root\eml_int_forloop_overflow_check.c
+build $builddir\sqrt.obj : cc $root\sqrt.c
+build $builddir\xscal.obj : cc $root\xscal.c
+build $builddir\xzlarf.obj : cc $root\xzlarf.c
+build $builddir\xhseqr.obj : cc $root\xhseqr.c
+build $builddir\xzlarfg.obj : cc $root\xzlarfg.c
+build $builddir\xdlanv2.obj : cc $root\xdlanv2.c
+build $builddir\xrot.obj : cc $root\xrot.c
+build $builddir\div.obj : cc $root\div.c
+build $builddir\stateDeriv_withGrav_LiamSet_Unified_args_emxutil.obj : cc $root\stateDeriv_withGrav_LiamSet_Unified_args_emxutil.c
+build $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.obj : cc $root\interface\_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.c
+build $builddir\c_mexapi_version.obj : cc $matlabdir\extern\version\c_mexapi_version.c
+
+# Link
+build $root\stateDeriv_withGrav_LiamSet_Unified_args_mex.mexw64 : link $builddir\stateDeriv_withGrav_LiamSet_Unified_args_data.obj $builddir\rt_nonfinite.obj $builddir\stateDeriv_withGrav_LiamSet_Unified_args_initialize.obj $builddir\stateDeriv_withGrav_LiamSet_Unified_args_terminate.obj $builddir\stateDeriv_withGrav_LiamSet_Unified_args.obj $builddir\sum.obj $builddir\sumMatrixIncludeNaN.obj $builddir\assertCompatibleDims.obj $builddir\norm.obj $builddir\calculateAdaptiveControl_Unified.obj $builddir\dot.obj $builddir\rotm2quat.obj $builddir\anyNonFinite.obj $builddir\xnrm2.obj $builddir\warning.obj $builddir\schur.obj $builddir\mldivide.obj $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_api.obj $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_mex.obj $builddir\eml_int_forloop_overflow_check.obj $builddir\sqrt.obj $builddir\xscal.obj $builddir\xzlarf.obj $builddir\xhseqr.obj $builddir\xzlarfg.obj $builddir\xdlanv2.obj $builddir\xrot.obj $builddir\div.obj $builddir\stateDeriv_withGrav_LiamSet_Unified_args_emxutil.obj $builddir\_coder_stateDeriv_withGrav_LiamSet_Unified_args_info.obj $builddir\c_mexapi_version.obj 
