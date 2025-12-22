@@ -298,8 +298,8 @@ for hh = 1:10:round(length(Time)/1)
     axis([Xax Yax Zax])
     %viewVec = cross(Rtgt(:,3,hh)');
     %view(viewVec);
-    % str1 = ['t = ' num2str(floor(Time(hh))) 's'];
-    str1 = ['sub_F' num2str(Func) '_' num2str(floor(Time(hh))) 's'];
+    str1 = ['t = ' num2str(floor(Time(hh))) 's'];title(str1);
+    % str1 = ['sub_F' num2str(Func) '_' num2str(floor(Time(hh))) 's'];
 
     % title(str1)
     xlabel('Radial, m','fontsize',18,'interpreter','latex')

@@ -88,7 +88,7 @@ Laminit = zeros(nx, numel(tmesh));
 solinit = bvpinit(tmesh, @(t) guess_y(t, tmesh, Xinit, Laminit));
 
 % Configure bvp4c solver options
-options = bvpset('RelTol',1e-5, 'AbsTol',1e-6, 'NMax',5000);
+options = bvpset('RelTol',1e-7, 'AbsTol',1e-7, 'NMax',5000);
 % RelTol, AbsTol: relative and absolute tolerance for solution accuracy
 % NMax: maximum number of mesh points to prevent excessive refinement
 
@@ -189,7 +189,7 @@ end
         
         % STEP 1: Compute df/du (how dynamics respond to control)
         % Using central finite differences: df/du ≈ [f(x,eps) - f(x,-eps)] / (2*eps)
-        eps_fd = 1e-6;
+        eps_fd = 1e-7;
         fu_plus = cartpole_dynamics(x, eps_fd);      % f(x, +eps)
         fu_minus = cartpole_dynamics(x, -eps_fd);    % f(x, -eps)
         df_du = (fu_plus - fu_minus)/(2*eps_fd);     % df/du (4x1 vector)
@@ -292,7 +292,7 @@ end
         %   u: saturated optimal control input
         
         % Compute df/du numerically
-        eps_fd = 1e-6;
+        eps_fd = 1e-7;
         fu_plus = cartpole_dynamics(x, eps_fd);
         fu_minus = cartpole_dynamics(x, -eps_fd);
         df_du = (fu_plus - fu_minus)/(2*eps_fd);

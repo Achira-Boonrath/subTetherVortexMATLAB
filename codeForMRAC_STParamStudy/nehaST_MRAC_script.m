@@ -91,7 +91,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
         fbControl = 'MRAC';
-        MRAC_v = 1; % Version of MRAC being used
+        MRAC_v = 2; % Version of MRAC being used
     
         % Set thrust magnitude from MRAC parameters
         FT_const = dataMRAC.MRACparams(8);
@@ -170,9 +170,9 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             s0(mrac_idx+7:mrac_idx+8) = [0, 0];
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-            args.Gamma_x = 25.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
-            args.Gamma_r = 25.0*5.1e+10;
-            args.Gamma_theta = 25.0*[[5e+7,   0];       [  0 ,  1e+4]];
+            args.Gamma_x = 35.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
+            args.Gamma_r = 35.0*150e+10;
+            args.Gamma_theta = 35.0*[[5e+7,   0];       [  0 ,  1e+4]];
             args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
             args.B_linear = [0, 1/chaserM]';
             args.sigmaMRACLin = 0*0.000003;
@@ -228,7 +228,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Set ODE solver options
         options = odeset('RelTol', 2e-8,'AbsTol', 2e-8,'Stats','off');
         % tspan = data.IntegrationTime(Idx0:IdxF) - data.IntegrationTime(Idx0); % Time span for integration
-        tspan = data.IntegrationTime(Idx0:(700+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
+        tspan = data.IntegrationTime(Idx0:(1700+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
     
         % Start timer for ODE solver
         tStart = tic;
@@ -396,7 +396,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             hold on;
             % yline(0.01)
             plot(t_plot, state_vec(1:tSkip:end, idx_mrac_start),"--")
-            % ylim([0 0.03])
+            ylim([0 5e-3])
             legend("Actual","Desired")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("MT Elongation, m", 'fontsize', 13,'interpreter','latex')
