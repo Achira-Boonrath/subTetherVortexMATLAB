@@ -5,6 +5,8 @@ import glob
 import subprocess
 from pathlib import Path
 
+#pip install opencv-contrib-python#
+
 # --- CONFIGURATION ---
 INPUT_DIR = "media"
 OUTPUT_DIR = "media_upscaled"
