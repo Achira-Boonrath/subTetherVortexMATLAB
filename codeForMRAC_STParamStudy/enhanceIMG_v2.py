@@ -8,10 +8,17 @@ from pathlib import Path
 # --- CONFIGURATION ---
 INPUT_DIR = "media"
 OUTPUT_DIR = "media_upscaled"
+
+# Model Settings
 MODEL_PATH = "EDSR_x4.pb"   # Path to your .pb model file
-MODEL_NAME = "edsr"         # specific algorithm name: 'edsr', 'fsrcnn', 'lapsrn', 'espcn'
-SCALE = 4                   # Upscale factor: 2, 3, 4, or 8 (must match the model file)
-USE_CUDA = False            # Set to True if you have an NVIDIA GPU and CUDA-enabled OpenCV
+MODEL_NAME = "edsr"         # 'edsr', 'fsrcnn', 'lapsrn', 'espcn'
+SCALE = 4                   # Must match the model file (x2, x3, x4)
+USE_CUDA = False            # Set True if you have an NVIDIA GPU
+
+# Sharpening Settings
+APPLY_SHARPENING = True
+SHARPEN_AMOUNT = 1.2       # Strength: 1.0 is standard, higher is stronger
+SHARPEN_SIGMA = 1.0        # Blur radius for the mask (1.0 is usually good)
 
 def init_model():
     """Initializes the super resolution model."""
@@ -25,11 +32,29 @@ def init_model():
             sr.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         return sr
     except Exception as e:
-        print(f"Failed to load model. Ensure {MODEL_PATH} exists and is correct.")
+        print(f"Failed to load model. Ensure {MODEL_PATH} exists.")
         raise e
 
+def sharpen_frame(image):
+    """
+    Applies Unsharp Masking to sharpen the image.
+    Formula: sharpened = original + (original - blurred) * amount
+    """
+    if not APPLY_SHARPENING:
+        return image
+        
+    # Create a Gaussian blur version of the image
+    blurred = cv2.GaussianBlur(image, (0, 0), SHARPEN_SIGMA)
+    
+    # Calculate the weighted sum
+    # Formula: src1 * alpha + src2 * beta + gamma
+    # We want: Original * (1 + Amount) + Blurred * (-Amount)
+    sharpened = cv2.addWeighted(image, 1.0 + SHARPEN_AMOUNT, blurred, -SHARPEN_AMOUNT, 0)
+    
+    return sharpened
+
 def upscale_image(path, output_folder, sr):
-    """Upscales a JPG image."""
+    """Upscales and sharpens a JPG image."""
     filename = os.path.basename(path)
     save_path = os.path.join(output_folder, f"upscaled_{filename}")
     
@@ -38,14 +63,18 @@ def upscale_image(path, output_folder, sr):
         print(f"Skipping corrupt image: {filename}")
         return
 
-    result = sr.upsample(img)
-    cv2.imwrite(save_path, result)
-    print(f"[IMG] Processed: {filename}")
+    # 1. Upscale
+    upscaled = sr.upsample(img)
+    
+    # 2. Sharpen
+    final_img = sharpen_frame(upscaled)
+    
+    cv2.imwrite(save_path, final_img)
+    print(f"[IMG] Processed & Sharpened: {filename}")
 
 def upscale_video(path, output_folder, sr):
-    """Upscales a HEVC video."""
+    """Upscales and sharpens a HEVC video."""
     filename = os.path.basename(path)
-    # Change extension to .mp4 for better compatibility after processing
     save_path = os.path.join(output_folder, f"upscaled_{Path(filename).stem}.mp4")
     
     cap = cv2.VideoCapture(path)
@@ -53,17 +82,14 @@ def upscale_video(path, output_folder, sr):
         print(f"Skipping unreadable video: {filename}")
         return
 
-    # Get video properties
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    # Calculate new dimensions
     new_width = width * SCALE
     new_height = height * SCALE
     
-    # Setup Video Writer (using mp4v codec)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(save_path, fourcc, fps, (new_width, new_height))
     
@@ -75,8 +101,13 @@ def upscale_video(path, output_folder, sr):
         if not ret:
             break
             
+        # 1. Upscale
         upscaled_frame = sr.upsample(frame)
-        out.write(upscaled_frame)
+        
+        # 2. Sharpen
+        final_frame = sharpen_frame(upscaled_frame)
+        
+        out.write(final_frame)
         
         current_frame += 1
         print(f"      Progress: {current_frame}/{total_frames}", end='\r')
@@ -85,16 +116,15 @@ def upscale_video(path, output_folder, sr):
     out.release()
     print(f"\n[VID] Finished: {filename}")
     
-    # Attempt to merge original audio back using ffmpeg (if installed)
     merge_audio(path, save_path)
 
 def merge_audio(original_video, new_video):
-    """Merges audio from original video to the new silent upscaled video."""
+    """Merges audio from original video to the new silent video using ffmpeg."""
     temp_file = new_video.replace(".mp4", "_audio.mp4")
     
-    # Simple ffmpeg command: copy video from new, copy audio from original
+    # Check if original has audio stream first (optional optimization)
     cmd = [
-        'ffmpeg', '-y',
+        'ffmpeg', '-y', '-loglevel', 'error',
         '-i', new_video,
         '-i', original_video,
         '-map', '0:v', '-map', '1:a',
@@ -104,7 +134,6 @@ def merge_audio(original_video, new_video):
     ]
     
     try:
-        # Check if ffmpeg is in path by running it with subprocess
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if os.path.exists(temp_file):
             os.replace(temp_file, new_video)
@@ -113,16 +142,14 @@ def merge_audio(original_video, new_video):
         print("      Note: FFmpeg not found. Video saved without audio.")
 
 def main():
-    # Setup directories
     if not os.path.exists(INPUT_DIR):
         print(f"Error: Directory '{INPUT_DIR}' not found.")
         return
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    # Initialize Super Resolution
     sr = init_model()
     
-    # Find files
+    # Extensions to look for
     extensions = ['*.jpg', '*.jpeg', '*.hevc', '*.h265']
     files = []
     for ext in extensions:
