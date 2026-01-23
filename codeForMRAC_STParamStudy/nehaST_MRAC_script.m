@@ -56,6 +56,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         
         if MRAC_v == 1
         % Initialize adaptive states for the ODE solver - MRAC-1
+            % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             s0(33) = (l_mt - l0vec(1)); 
             s0(34) = 0.0; 
             % ${\hat{h}}$ 
@@ -63,6 +64,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % $\hat{\mathbf{a}}=[{\hat{a}}_1, {\hat{a}}_2]^T$
             s0(36) = 1.0 * Kvec(1);
             s0(37) = 1.0 * cVec(1);
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             s0(38:39) = [0, 0];
 
             % Good 1
@@ -72,30 +74,6 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             args.sigmaMRAC_h  = 0.05; %1.0e+03; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
             args.sigmaMRAC_a1 = 0.0005; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
             args.sigmaMRAC_a2 = 0.05; %0.25 * 0.01 *3*4.0*(args.L0/15.0);
-
-            % wIn2=[0.687367280667017                   0   0.489991127634287]; % opt solu 1
-            % lb1 = 15*0.6; ub1 = 15*1.1;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(1.0); ub2 = chaserM*3.8*(2.0);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 27; ub3 = 33;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
-
-            % wIn2=[0   0.101953473828612   0.972077265457035]; % opt solu 2
-            % lb1 = 15*0.7; ub1 = 15*1.1;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(0.8); ub2 = chaserM*3.8*(1.5);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 28; ub3 = 32;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
-
-            % wIn2=[0.761115429591623   0.800889939488221                   0]; % opt solu 3
-            % lb1 = 15*0.5; ub1 = 15*1.0;
-            % args.L0 = wIn2(1)*(ub1 - lb1) +  lb1;
-            % lb2 = chaserM*3.8*(0.9); ub2 = chaserM*3.8*(1.5);
-            % args.kA = wIn2(2)*(ub2 - lb2) +  lb2;
-            % lb3 = 28; ub3 = 32;
-            % args.gamma = wIn2(3)*(ub3 - lb3) +  lb3;
 
             args.sigmaMRAC_h  = (args.gamma/30)*0.05; 
             args.sigmaMRAC_a1 = (args.gamma/30)*0.0005; 
@@ -108,11 +86,11 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             
             % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %$\hat{k}_r $
-            s0(35) = 37500; 
+            s0(35) = 37500; % range = linspace(37500*0.5 , 37500*1.5 , 5)
             %$\hat{\mathbf{K}}_z=[\hat{k}_{z,1}, \hat{k}_{z,2}]^T$
-            s0(36:37) = -1*[37500, 56250]; 
+            s0(36:37) = -1*[37500, 56250]; % range = linspace(37500*0.5 , 37500*1.5 , 5), % range = linspace(56250*0.5 , 56250*1.5 , 5)
             %$\hat{{\boldsymbol{\Theta}}} =[\hat{{\boldsymbol{\Theta}}}_{1}, \hat{{\boldsymbol{\Theta}}}_{2}]^T$
-            s0(38:39) = -0.5*[30925, 14.78]; 
+            s0(38:39) = -0.5*[30925, 14.78]; % range = 0.5*linspace(37500*0.5 , 37500*1.5 , 5), % range = linspace(14.78*0.5 , 14.78*1.5 , 5)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             args.Gamma_x = [[5e+7 ,   0];       [  0 ,  5e+7]];
