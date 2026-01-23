@@ -1,0 +1,117 @@
+function optControl_bvp4c
+close all; clear all; clc
+
+
+%% Problem parameters
+t0 = 0;
+tf = 1.5 * 0.5*3600;
+r0 = (780+6378)*1e-0;
+rf = (770+6378)*1e-0;
+mu = 398600*1e-0;
+
+x0 = [ r0,...
+    0,...
+    0,...
+    sqrt(mu/r0),...
+    ]'; % initial state
+
+xf = [ -rf,...
+    0,...
+    0,...
+    -sqrt(mu/rf),...
+    ]'; % terminal state
+
+% Initial mesh and guess
+tmesh = linspace(t0, tf, 20);
+guess = @(t) [ ...
+    x0(1) + (xf(1)-x0(1))*t/tf;   % x1 guess
+    x0(2) + (xf(2)-x0(2))*t/tf;   % x2 guess
+    x0(3) + (xf(3)-x0(3))*t/tf;   % x1 guess
+    x0(4) + (xf(4)-x0(4))*t/tf;   % x2 guess
+    0;                           % lambda1 guess
+    0;
+    0;                           % lambda1 guess
+    0 ];                         % lambda2 guess
+
+solinit = bvpinit(tmesh, guess);
+%%
+    function dYdt = odefun(~, Y)
+
+        x1 = Y(1);
+        x2 = Y(2);
+        x3 = Y(3);
+        x4 = Y(4);
+        L1 = Y(3);
+        L2 = Y(4);
+        L3 = Y(3);
+        L4 = Y(4);
+
+        % Optimal control
+        u = [-L3;...
+             -L4];...
+
+        dYdt = [x3,...
+            x4,...
+            -x1*mu/((x1^2 + x2^2)^(3/2)) - L3,...
+            -x2*mu/((x1^2 + x2^2)^(3/2)) - L4,...
+            L3*mu*((-2*x1^2 + x2^2)/(x1^2 + x2^2)^(5/2)),...
+            L4*mu*((-2*x2^2 + x1^2)/(x1^2 + x2^2)^(5/2)),...
+            -L1,...
+            -L2,...
+            ];
+    end
+%%
+    function res = bcfun(Y0, Yf)
+
+        res = [
+            Y0(1) - x0(1);   % x1(0)
+            Y0(2) - x0(2);   % x2(0)
+            Y0(3) - x0(3);   % x1(0)
+            Y0(4) - x0(4);   % x2(0)
+            Yf(1) - xf(1);   % x1(tf)
+            Yf(2) - xf(2);    % x2(tf)
+            Yf(3) - xf(3);   % x1(tf)
+            Yf(4) - xf(4)    % x2(tf)
+            ];
+    end
+
+%% Solve TPBVP
+options = bvpset('RelTol',1e-7, 'AbsTol',1e-7, 'NMax',5000);
+sol = bvp4c(@odefun, @bcfun, solinit, options);
+
+%%
+
+% syms x1(t) x2(t) x3(t) x4(t) L1(t) L2(t) L3(t) L4(t) ux(t) uy(t)
+%
+% mu = 398600;
+%
+% eqns = [diff(L1,t) == L3*mu*((-2*x1^2 + x2^2)/(x1^2 + x2^2)^(5/2)),...
+%         diff(L2,t) == L4*mu*((-2*x2^2 + x1^2)/(x1^2 + x2^2)^(5/2)),...
+%         diff(L3,t) == -L1*x3,...
+%         diff(L4,t) == -L2*x4,...
+%         diff(x1,t) == x3,...
+%         diff(x2,t) == x4,...
+%         diff(x3,t) == -x1*mu/((x1^2 + x2^2)^(3/2)) - L3,...
+%         diff(x4,t) == -x2*mu/((x1^2 + x2^2)^(3/2)) - L4,...
+%         ];
+%
+% S = dsolve(eqns);
+%
+% %%
+% t0 = 0;
+% tf = 1.5 * 0.5*3600;
+%
+% r0 = 780+6378;
+% rf = 770+6378;
+% eqnsSub = [subs( S.x1,t0 ) == r0,...
+%            subs( S.x2,t0 ) == 0,...
+%            subs( S.x3,t0 ) == 0,...
+%            subs( S.x4,t0 ) == sqrt(mu/r0),...
+%            subs( S.x1,tf ) == -rf,...
+%            subs( S.x2,tf ) == 0,...
+%            subs( S.x3,tf ) == 0,...
+%            subs( S.x4,tf ) == -sqrt(mu/rf),...
+%            ];
+%
+% SS = solve(eqnsSub);
+end

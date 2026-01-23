@@ -1,0 +1,68 @@
+function [star_xdot,star_Ldot] = odePlaneCWH(Lvec,X,Xnum,U)
+    
+    % 3. Define the dynamics vector function f (dX/dt)
+    % From CWH equations:
+    f = [vx; ...
+         vy; ...
+         3*n^2*x + 2*n*vy + ax; ...
+         -2*n*vx + ay; ...
+         ];
+    
+    %%
+    % 4. Compute the Jacobians (A and B matrices)
+    % Compute Jacobians of the dynamics f with respect to state and control.
+    % A is the state Jacobian (df/dx) and B is the input Jacobian (df/du).
+    A = jacobian(f, X);
+    B = jacobian(f, U);
+    
+    % Display the symbolic A and B matrices so the user can inspect linearized dynamics.
+    disp('State Matrix A (Jacobian wrt State):')
+    disp(A)
+    
+    disp('Input Matrix B (Jacobian wrt Control):')
+    disp(B)
+    
+    % -------------------------------------------------------------------------
+    % Form the Hamiltonian for an optimal-control problem with quadratic control cost.
+    % V   = 0.5 * U' * U  is the instantaneous cost on the control (scalar).
+    % Lvec = [L1; L2; L3; L4] are the costate (adjoint) variables multiplying the dynamics f.
+    % H   = V + L' * f is the Hamiltonian used in Pontryagin's Minimum Principle.
+    % -------------------------------------------------------------------------
+    V = 0.5*U'*U;
+    % Lvec = [L1 L2 L3 L4 L5 L6 ].';
+    % Lvec = sym('L(t)', size(f));     % State vector [x1; x2]
+    H = V + Lvec.'*f;
+    
+    % -------------------------------------------------------------------------
+    % Optimality condition: dH/dU = 0  (partial derivative of Hamiltonian wrt controls)
+    % starU is the vector of partial derivatives (should be set to zero).
+    % -------------------------------------------------------------------------
+    starU = jacobian(H, U);                     % dH/du (column vector)
+    starUSolved = solve( starU, U );            % solve dH/du == 0 for the control variables
+    fn = fieldnames(starUSolved);
+    for k = 1:numel(fn)
+        optU(k)=getfield(starUSolved, fn{k});
+    end
+    optU = optU.';
+    
+    % Substitute the solved optimal controls back into the Hamiltonian to obtain the minimized Hamiltonian.
+    % The solve(...) call returns a struct with fields named after the control symbols (ax, ay).
+    % starH = subs(H, U, [starUSolved.ax, starUSolved.ay, starUSolved.az].');
+    starH = subs(H, U, optU);
+    
+    % -------------------------------------------------------------------------
+    % From the minimized Hamiltonian starH, obtain the canonical Hamiltonian ODEs:
+    %   xdot =  dH/dL   (state dynamics expressed using costates)
+    %   Ldot = -dH/dx   (costate dynamics)
+    % -------------------------------------------------------------------------
+    star_xdot = jacobian(starH, Lvec);  % ∂H/∂L  -> gives the state derivatives
+    star_Ldot = -jacobian(starH, X);    % -∂H/∂x -> gives the costate derivatives
+    
+    % Replace the symbolic state vector X (x,y,vx,vy) with the time-indexed symbolic names Xnum
+    star_xdot = subs(star_xdot, X, Xnum);
+    star_Ldot = subs(star_Ldot, X, Xnum);
+    
+    % n_val = 0.0010;   % rad/s (LEO example)
+    % A_num = double(subs(A, n, n_val));
+    % B_num = double(B);
+end

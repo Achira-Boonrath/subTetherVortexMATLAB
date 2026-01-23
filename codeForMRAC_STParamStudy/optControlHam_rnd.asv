@@ -45,7 +45,7 @@ syms x1(t) x2(t) x3(t) x4(t) x5(t) x6(t) real
 % 1. Define the state vector (Position and Velocity)
 X = [x; y; vx; vy];
 Xnum = [x1 x2 x3 x4].';
-Lvec = [L1 L2 L3 L4].';
+
 % 2. Define the control vector (Accelerations)
 U = [ax; ay];
 
@@ -58,8 +58,60 @@ f = [vx; ...
      ];
 
 %%
+% 4. Compute the Jacobians (A and B matrices)
+% Compute Jacobians of the dynamics f with respect to state and control.
+% A is the state Jacobian (df/dx) and B is the input Jacobian (df/du).
+A = jacobian(f, X);
+B = jacobian(f, U);
 
-[star_xdot,star_Ldot] = odeDynAndLag(Lvec,X,Xnum,U,f);
+% Display the symbolic A and B matrices so the user can inspect linearized dynamics.
+disp('State Matrix A (Jacobian wrt State):')
+disp(A)
+
+disp('Input Matrix B (Jacobian wrt Control):')
+disp(B)
+
+% -------------------------------------------------------------------------
+% Form the Hamiltonian for an optimal-control problem with quadratic control cost.
+% V   = 0.5 * U' * U  is the instantaneous cost on the control (scalar).
+% Lvec = [L1; L2; L3; L4] are the costate (adjoint) variables multiplying the dynamics f.
+% H   = V + L' * f is the Hamiltonian used in Pontryagin's Minimum Principle.
+% -------------------------------------------------------------------------
+V = 0.5*U'*U;
+% Lvec = [L1 L2 L3 L4 L5 L6 ].';
+Lvec = [L1 L2 L3 L4].';
+% Lvec = sym('L(t)', size(f));     % State vector [x1; x2]
+H = V + Lvec.'*f;
+
+% -------------------------------------------------------------------------
+% Optimality condition: dH/dU = 0  (partial derivative of Hamiltonian wrt controls)
+% starU is the vector of partial derivatives (should be set to zero).
+% -------------------------------------------------------------------------
+starU = jacobian(H, U);                     % dH/du (column vector)
+starUSolved = solve( starU, U );            % solve dH/du == 0 for the control variables
+optU = [starUSolved.ax, starUSolved.ay].';
+
+% Substitute the solved optimal controls back into the Hamiltonian to obtain the minimized Hamiltonian.
+% The solve(...) call returns a struct with fields named after the control symbols (ax, ay).
+% starH = subs(H, U, [starUSolved.ax, starUSolved.ay, starUSolved.az].');
+starH = subs(H, U, optU);
+
+% -------------------------------------------------------------------------
+% From the minimized Hamiltonian starH, obtain the canonical Hamiltonian ODEs:
+%   xdot =  dH/dL   (state dynamics expressed using costates)
+%   Ldot = -dH/dx   (costate dynamics)
+% -------------------------------------------------------------------------
+star_xdot = jacobian(starH, Lvec);  % ∂H/∂L  -> gives the state derivatives
+star_Ldot = -jacobian(starH, X);    % -∂H/∂x -> gives the costate derivatives
+
+% Replace the symbolic state vector X (x,y,vx,vy) with the time-indexed symbolic names Xnum
+star_xdot = subs(star_xdot, X, Xnum);
+star_Ldot = subs(star_Ldot, X, Xnum);
+
+% n_val = 0.0010;   % rad/s (LEO example)
+% A_num = double(subs(A, n, n_val));
+% B_num = double(B);
+
 
 %% Symbolic state + costate (Lagrange multiplier) definitions
 % Define symbolic time-dependent functions for the state variables:
@@ -68,6 +120,12 @@ f = [vx; ...
 % L1..L4: costate (adjoint) variables associated with x1..x4
 % ux, uy: declared here if control variables are later required (not used in this snippet)
 % syms x1(t) x2(t) x3(t) x4(t) L1(t) L2(t) L3(t) L4(t) ux(t) uy(t)
+
+% Physical / problem parameters
+% mu: standard gravitational parameter (keplerian), kept here for reference (not used below)
+% n: mean motion (rad/s) used in the linearized relative-motion (Clohessy-Wiltshire) terms
+% mu = 398600;
+% n = 0.001;
 
 %% System of ordinary differential equations (ODEs)
 % The first four are the costate (adjoint) differential equations:
@@ -88,13 +146,19 @@ f = [vx; ...
 %         diff(x4,t) == -(2*n)*x3 - L4,                 % x4' = -2 n x3 - L4
 % ];
 
+% eqns = [
+%         % Costate dynamics:
+%         ([diff(L1,t), diff(L2,t), diff(L3,t), diff(L4,t), diff(L5,t), diff(L6,t)] == star_Ldot).',
+%         % State dynamics (linearized relative motion with costate forcing terms):
+%         ([diff(x1,t), diff(x2,t), diff(x3,t), diff(x4,t), diff(x5,t), diff(x6,t)] == star_xdot).',                 
+%         ];
+
 eqns = [
         % Costate dynamics:
-        (diff(Lvec,t).' == star_Ldot).',
+        ([diff(L1,t), diff(L2,t), diff(L3,t), diff(L4,t)] == star_Ldot).',
         % State dynamics (linearized relative motion with costate forcing terms):
-        (diff(Xnum,t).' == star_xdot).',                 
+        ([diff(x1,t), diff(x2,t), diff(x3,t), diff(x4,t)] == star_xdot).',                 
         ];
-
 % Solve the system of linear ODEs symbolically.
 % dsolve returns the general solution with arbitrary integration constants (C1, C2, ...).
 % eqns = subs(eqns, n, meanMotion);
@@ -167,9 +231,6 @@ C8 = SS.C8;
 xt = @(t) ((subs(simplify(S.x1))));
 yt = @(t) ((subs(simplify(S.x2))));
 
-uxt = @(t) ((subs(simplify(S.ax))));
-uyt = @(t) ((subs(simplify(S.ay))));
-
 % xt = @(t) vpa( subs(S.x1) );
 % yt = @(t) vpa( subs(S.x2) );
 
@@ -187,10 +248,4 @@ uyt = @(t) ((subs(simplify(S.ay))));
 % 
 figure 
 plot(double( xt( linspace(0,tf,35) )), double( yt( linspace(0,tf,35) )))
-grid on
-
-figure
-plot(double( uxt( linspace(0,tf,35) ))) 
-hold on
-plot(double( uyt( linspace(0,tf,35) )))
 grid on

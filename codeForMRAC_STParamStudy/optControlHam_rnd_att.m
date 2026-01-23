@@ -5,99 +5,67 @@ close all; clear all; clc
 
 %% Compute Jacobians
 
-% % 1. Define symbolic dimensions and variables
-% n = 2; % Number of states
-% m = 1; % Number of controls
-% 
-% x = sym('x', [n 1]);     % State vector [x1; x2]
-% u = sym('u', [m 1]);     % Control vector [u1]
-% A = sym('A', [n n]);     % System matrix A
-% B = sym('B', [n m]);     % Input matrix B
-% 
-% % 2. Define the dynamics equation: x_dot = Ax + Bu
-% f = A*x + B*u;
-
 meanMotion = 0.001;
 % Define symbolic variables
 syms x(t) y(t) z(t) vx(t) vy(t) vz(t) n ...
-    ax ay az L1(t) L2(t) L3(t) L4(t) L5(t) L6(t) real 
+    ax ay az L1(t) L2(t) L3(t) L4(t) L5(t) L6(t) ...
+    Jx Jy Jz L7(t) L8(t) L9(t) L10(t) L11(t) L12(t) L13(t) real 
 
 syms x1(t) x2(t) x3(t) x4(t) x5(t) x6(t) real 
 
+% syms tx(t) ty(t) tz(t) q1(t) q2(t) q3(t) q4(t) wx(t) wy(t) wz(t) real
+syms tx ty tz q1(t) q2(t) q3(t) q4(t) wx(t) wy(t) wz(t) real
 %% xyz
-% % 1. Define the state vector (Position and Velocity)
-% X = [x; y; z; vx; vy; vz];
-% Xnum = [x1 x2 x3 x4 x5 x6].';
-% 
-% % 2. Define the control vector (Accelerations)
-% U = [ax; ay; az];
-% 
-% % 3. Define the dynamics vector function f (dX/dt)
-% % From CWH equations:
-% f = [vx; ...
-%      vy; ...
-%      vz; ...
-%      3*n^2*x + 2*n*vy + ax; ...
-%      -2*n*vx + ay; ...
-%      -n^2*z + az];
-
-%% xy
 % 1. Define the state vector (Position and Velocity)
-X = [x; y; vx; vy];
-Xnum = [x1 x2 x3 x4].';
-Lvec = [L1 L2 L3 L4].';
+% States and Controls
+X = [x; y; z; vx; vy; vz; q1; q2; q3; q4; wx; wy; wz];
+Xnum = [x1 x2 x3 x4 x5 x6 q1 q2 q3 q4 wx wy wz].';
+J = diag([Jx, Jy, Jz]);
+omega = [wx; wy; wz];
+
 % 2. Define the control vector (Accelerations)
-U = [ax; ay];
+U = [ax; ay; az; tx; ty; tz];
 
 % 3. Define the dynamics vector function f (dX/dt)
 % From CWH equations:
-f = [vx; ...
+f_trans = [vx; ...
      vy; ...
+     vz; ...
      3*n^2*x + 2*n*vy + ax; ...
      -2*n*vx + ay; ...
-     ];
+     -n^2*z + az];
 
+% Omega matrix for q_dot = 0.5 * Omega * q
+Omega_mat = [ 0,   wz, -wy,  wx; ...
+             -wz,  0,   wx,  wy; ...
+              wy, -wx,  0,   wz; ...
+             -wx, -wy, -wz,  0];
+f_quat = 0.5 * Omega_mat * [q1; q2; q3; q4];
+
+% tau = J*w_dot + w x (J*w)  => w_dot = J^-1 * (tau - w x Jw)
+f_omega = inv(J) * ([tx; ty; tz] - cross(omega, J*omega));
+
+% Combined System
+f = [f_trans; f_quat; f_omega];
+Lvec = [L1 L2 L3 L4 L5 L6...
+    L7 L8 L9 L10 L11 L12 L13].';
 %%
 
 [star_xdot,star_Ldot] = odeDynAndLag(Lvec,X,Xnum,U,f);
 
-%% Symbolic state + costate (Lagrange multiplier) definitions
-% Define symbolic time-dependent functions for the state variables:
-% x1, x2: relative position components (e.g., along-track and radial)
-% x3, x4: corresponding velocity components
-% L1..L4: costate (adjoint) variables associated with x1..x4
-% ux, uy: declared here if control variables are later required (not used in this snippet)
-% syms x1(t) x2(t) x3(t) x4(t) L1(t) L2(t) L3(t) L4(t) ux(t) uy(t)
-
 %% System of ordinary differential equations (ODEs)
 % The first four are the costate (adjoint) differential equations:
 %   diff(Li,t) = - dH/dxi  (from Pontryagin Minimum Principle / Hamiltonian)
-% The last four are the state differential equations (dynamics).
-% Comments indicate the physical meaning of each equation where applicable.
-% eqns = [
-%         % Costate dynamics:
-%         diff(L1,t) == - L3*3*(n^2),   % L1' = -3 n^2 * L3
-%         diff(L2,t) == - 0,            % L2' = 0  
-%         diff(L3,t) == - (L1 + L4*(-2*n)), % L3' = -(L1 - 2 n L4)
-%         diff(L4,t) == - (L2 + L3*(2*n)),  % L4' = -(L2 + 2 n L3)
-% 
-%         % State dynamics (linearized relative motion with costate forcing terms):
-%         diff(x1,t) == x3,                             % x1' = x3  
-%         diff(x2,t) == x4,                             % x2' = x4
-%         diff(x3,t) == 3*(n^2)*x1  + (2*n)*x4 - L3,    % x3' = 3 n^2 x1 + 2 n x4 - L3  
-%         diff(x4,t) == -(2*n)*x3 - L4,                 % x4' = -2 n x3 - L4
-% ];
 
 eqns = [
         % Costate dynamics:
-        (diff(Lvec,t).' == star_Ldot).',
+        (diff(Lvec, t).'  == star_Ldot).',
         % State dynamics (linearized relative motion with costate forcing terms):
-        (diff(Xnum,t).' == star_xdot).',                 
+        (diff(Xnum, t).'  == star_xdot).',                 
         ];
 
 % Solve the system of linear ODEs symbolically.
 % dsolve returns the general solution with arbitrary integration constants (C1, C2, ...).
-% eqns = subs(eqns, n, meanMotion);
 S = dsolve(eqns);
 
 % Recursively simplify symbolic expressions in struct S
