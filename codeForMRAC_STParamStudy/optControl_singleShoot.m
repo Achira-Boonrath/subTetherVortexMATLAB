@@ -112,4 +112,78 @@ figure
 plot( x(:, 1), x(:, 2), 'LineWidth', 1.5 )
 grid on
 
+%% Animation
+figure;
+set(gcf, 'Color', 'w');
+hold on; axis equal; grid on;
+xlabel('x (m)'); ylabel('y (m)');
+title('Satellite Maneuvering Animation');
+
+% Plot the target state (origin)
+plot(0, 0, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target');
+
+% Create animated line for trajectory and marker for satellite
+hTraj = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Trajectory');
+hSat = plot(x(1, 1), x(1, 2), 'k.', 'MarkerSize', 20, 'DisplayName', 'Satellite');
+
+% Calculate scaling for thrust vector visualization
+% We want the max thrust vector to correspond to roughly 15% of the plot span
+x_span = max(x(:,1)) - min(x(:,1));
+y_span = max(x(:,2)) - min(x(:,2));
+avg_span = (x_span + y_span) / 2;
+if avg_span == 0, avg_span = 1; end
+u_mag = sqrt(sum(u.^2, 2));
+max_u = max(u_mag);
+if max_u == 0, scale_inv = 1; else, scale_inv = (0.15 * avg_span) / max_u; end
+
+% Initialize thrust vector (scaled)
+hThrust = quiver(x(1, 1), x(1, 2), u(1, 1)*scale_inv, u(1, 2)*scale_inv, ...
+    'r', 'LineWidth', 2, 'MaxHeadSize', 0.5, 'AutoScale', 'off', 'DisplayName', 'Thrust Direction');
+
+legend('show', 'Location', 'best');
+
+% Set axis limits with some padding
+x_min = min(x(:,1)); x_max = max(x(:,1));
+y_min = min(x(:,2)); y_max = max(x(:,2));
+dx = x_max - x_min; if dx==0, dx=1; end
+dy = y_max - y_min; if dy==0, dy=1; end
+xlim([x_min - 0.2*dx, x_max + 0.2*dx]);
+ylim([y_min - 0.2*dy, y_max + 0.2*dy]);
+
+% Setup Video Writer
+videoFilename = 'satellite_maneuver.mp4';
+vWriter = VideoWriter(videoFilename, 'MPEG-4');
+vWriter.FrameRate = 30; % Adjust frame rate as needed
+open(vWriter);
+
+% Loop through time steps to animate
+% Depending on the number of steps in 't', we might want to skip frames to keep video short
+nSteps = length(t);
+frameStep = max(1, floor(nSteps / 300)); % Target approx 300 frames max (~10s at 30fps)
+
+for k = 1:frameStep:nSteps
+    addpoints(hTraj, x(k, 1), x(k, 2));
+    set(hSat, 'XData', x(k, 1), 'YData', x(k, 2));
+    
+    % Update thrust vector
+    set(hThrust, 'XData', x(k, 1), 'YData', x(k, 2), ...
+        'UData', u(k, 1)*scale_inv, 'VData', u(k, 2)*scale_inv);
+    
+    drawnow;
+    
+    % Capture frame for video
+    frame = getframe(gcf);
+    writeVideo(vWriter, frame);
+end
+
+addpoints(hTraj, x(end, 1), x(end, 2));
+set(hSat, 'XData', x(end, 1), 'YData', x(end, 2));
+set(hThrust, 'XData', x(end, 1), 'YData', x(end, 2), ...
+        'UData', u(end, 1)*scale_inv, 'VData', u(end, 2)*scale_inv);
+drawnow;
+writeVideo(vWriter, getframe(gcf));
+
+close(vWriter);
+fprintf('Animation saved to %s\n', videoFilename);
+
 end
