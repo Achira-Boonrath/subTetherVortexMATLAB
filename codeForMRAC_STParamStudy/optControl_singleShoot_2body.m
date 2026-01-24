@@ -1,7 +1,6 @@
-function optControl_singleShoot
-% optControl_singleShoot
-% Solves a single-shooting optimal control problem for a 2D linearized
-% relative motion (Clohessy-Wiltshire/Hill) model using costate shooting.
+function optControl_singleShoot_2body
+% optControl_singleShoot_2body
+% Solves a single-shooting optimal control problem 
 % The Hamiltonian system (state + costate) is integrated and fsolve is used
 % to find the initial costates that satisfy the terminal state constraint.
 %
@@ -20,19 +19,23 @@ function optControl_singleShoot
 close all; clear all; clc
 
 %% Problem data
-tf = 3600*0.5;                % Final time (seconds) 
-x0 = [0 -500 0 0 ]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
-xf = [0  0 0 0 ]';             % Desired terminal state at t = tf
+tf = 1.5*3600*0.5;                % Final time (seconds) 
+r0 = 780+6378;
+rf = 1770+6378;
+muVal = 398600;
+
+x0 = [r0 0 0 sqrt(muVal/r0) ]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
+xf = [-rf 0 0 -sqrt(muVal/rf) ]';             % Desired terminal state at t = tf
 
 % Initial guess for costates (at t=0). fsolve will update this.
-lambda0_guess = [0; 0; 0; 0];
+lambda0_guess = [0; 0; 0; -1];
 
 %% Physical parameter
 meanMotion = 0.001;            % Mean motion n (rad/s) for CWH model
 
 %% Define symbolic variables for deriving equations
 % State symbols (position and velocity)
-syms x y z vx vy vz n ...
+syms x y z vx vy vz n muEarth ...
     ax ay az L1 L2 L3 L4 L5 L6 real
 
 % Numeric symbols that will be used to build function handles later
@@ -46,8 +49,8 @@ U = [ax; ay];                  % symbolic control vector (2x1)
 % Define the dynamics f = dX/dt (Clohessy-Wiltshire linearized relative motion)
 f = [vx; ...
      vy; ...
-     3*n^2*x + 2*n*vy + ax; ...
-     -2*n*vx + ay; ...
+     -x1*muEarth/((x1^2 + x2^2)^(3/2)) + ax; ...
+     -x2*muEarth/((x1^2 + x2^2)^(3/2)) + ay; ...
      ];
 % Symbolic costate vector (4x1)
 Lvec = [L1 L2 L3 L4].';
@@ -65,7 +68,7 @@ eqns = [
         (star_xdot).'          % state ODEs (row)
         ];
 % Substitute the numeric value for mean motion to simplify expressions
-eqns = subs(simplify(eqns), n, meanMotion);
+eqns = subs(simplify(eqns), muEarth, muVal);
 
 % Build a function handle that substitutes numeric z = [lambda; x] into the
 % symbolic eqns. This handle is passed to the ODE evaluator and shooting.
@@ -82,7 +85,7 @@ F = shooting(lambda0_guess, x0, xf, tf, funcSubs);
 % Now use fsolve to find lambda0 that makes the terminal state match xf
 lambda0 = fsolve(@(lam0) shooting(lam0, x0, xf, tf, funcSubs), ...
     lambda0_guess, ...
-    optimoptions('fsolve', 'Display', 'iter'));
+    optimoptions('fsolve', 'Display', 'iter', 'MaxIterations', 30));
 
 %% Integrate the Hamiltonian system with the solved initial costates
 % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
@@ -116,11 +119,18 @@ plot(t, u, 'LineWidth', 1.5), ylabel('u'), xlabel('Time (s)'), grid on
 figure;
 set(gcf, 'Color', 'w');
 hold on; axis equal; grid on;
+% Circle parameters
+h = 0; % x-coordinate of center
+k = 0; % y-coordinate of center
+
+
+% Implicit equation: (x-h)^2 + (y-k)^2 - r^2 = 0
+
 xlabel('x (m)'); ylabel('y (m)');
 title('Satellite Maneuvering Animation');
 
 % Plot the target state (origin)
-plot(0, 0, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target');
+plot(-rf, 0, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target');
 
 % Create animated line for trajectory and marker for satellite
 hTraj = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Trajectory');
@@ -170,7 +180,9 @@ for k = 1:frameStep:nSteps
         'UData', u(k, 1)*scale_inv, 'VData', u(k, 2)*scale_inv);
     
     drawnow;
-    
+
+    viscircles([0 0; 0 0],[r0 rf])
+    axis equal;
     % Capture frame for video
     frame = getframe(gcf);
     writeVideo(vWriter, frame);

@@ -20,37 +20,60 @@ function optControl_singleShoot
 close all; clear all; clc
 
 %% Problem data
-tf = 3600*0.5;                % Final time (seconds) 
-x0 = [0 -500 0 0 ]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
-xf = [0  0 0 0 ]';             % Desired terminal state at t = tf
+tf = 3600*0.5;                % Final time (seconds) - quarter hour
+x0 = [[0 -500 0 0 0 0], rotm2quat(rotz(0)), [0 0 0]]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s) quat2rotm([1 0 0 0])
+xf = [[0 0 0 0 0 0], rotm2quat(rotz(180)), [0 0 0]]';             % Desired terminal state at t = tf
 
 % Initial guess for costates (at t=0). fsolve will update this.
-lambda0_guess = [0; 0; 0; 0];
+lambda0_guess = zeros(length(xf),1);
 
 %% Physical parameter
 meanMotion = 0.001;            % Mean motion n (rad/s) for CWH model
 
 %% Define symbolic variables for deriving equations
 % State symbols (position and velocity)
+% Define symbolic variables
 syms x y z vx vy vz n ...
-    ax ay az L1 L2 L3 L4 L5 L6 real
+    ax ay az L1 L2 L3 L4 L5 L6 ...
+    Jx Jy Jz L7 L8 L9 L10 L11 L12 L13 real 
 
-% Numeric symbols that will be used to build function handles later
-syms x1 x2 x3 x4 x5 x6 real
+syms x1 x2 x3 x4 x5 x6 real 
 
-% Build state and control symbolic vectors for clarity
-X = [x; y; vx; vy];            % symbolic state vector (4x1)
-Xnum = [x1 x2 x3 x4].';        % corresponding numeric placeholders
-U = [ax; ay];                  % symbolic control vector (2x1)
+syms tx ty tz q1 q2 q3 q4 wx wy wz real
 
-% Define the dynamics f = dX/dt (Clohessy-Wiltshire linearized relative motion)
-f = [vx; ...
+% 1. Define the state vector (Position and Velocity)
+% States and Controls
+X = [x; y; z; vx; vy; vz; q1; q2; q3; q4; wx; wy; wz];
+Xnum = [x1 x2 x3 x4 x5 x6 q1 q2 q3 q4 wx wy wz].';
+J = diag([Jx, Jy, Jz]);
+omega = [wx; wy; wz];
+
+% 2. Define the control vector (Accelerations)
+U = [ax; ay; az; tx; ty; tz];
+
+% 3. Define the dynamics vector function f (dX/dt)
+% From CWH equations:
+f_trans = [vx; ...
      vy; ...
+     vz; ...
      3*n^2*x + 2*n*vy + ax; ...
      -2*n*vx + ay; ...
-     ];
-% Symbolic costate vector (4x1)
-Lvec = [L1 L2 L3 L4].';
+     -n^2*z + az];
+
+% Omega matrix for q_dot = 0.5 * Omega * q
+Omega_mat = [ 0,   wz, -wy,  wx; ...
+             -wz,  0,   wx,  wy; ...
+              wy, -wx,  0,   wz; ...
+             -wx, -wy, -wz,  0];
+f_quat = 0.5 * Omega_mat * [q1; q2; q3; q4];
+
+% tau = J*w_dot + w x (J*w)  => w_dot = J^-1 * (tau - w x Jw)
+f_omega = inv(J) * ([tx; ty; tz] - cross(omega, J*omega));
+
+% Combined System
+f = [f_trans; f_quat; f_omega];
+Lvec = [L1 L2 L3 L4 L5 L6...
+    L7 L8 L9 L10 L11 L12 L13].';
 
 %% Build symbolic ODEs for states and costates using helper
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
@@ -66,6 +89,7 @@ eqns = [
         ];
 % Substitute the numeric value for mean motion to simplify expressions
 eqns = subs(simplify(eqns), n, meanMotion);
+eqns = subs(eqns,  J,  diag([1000, 1000, 1000]) );
 
 % Build a function handle that substitutes numeric z = [lambda; x] into the
 % symbolic eqns. This handle is passed to the ODE evaluator and shooting.
@@ -73,7 +97,7 @@ funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(xf)), z((length(xf)+1):end)
 
 %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
 % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
-dzdt = hamiltonian_ode(0, ones(length(xf)+length(xf), 1), funcSubs);
+dzdt = hamiltonian_ode(0, ones(2*length(xf), 1), funcSubs);
 
 %% Solve two-point boundary value problem via shooting
 % First try a single invocation of shooting with the initial guess
@@ -85,7 +109,7 @@ lambda0 = fsolve(@(lam0) shooting(lam0, x0, xf, tf, funcSubs), ...
     optimoptions('fsolve', 'Display', 'iter'));
 
 %% Integrate the Hamiltonian system with the solved initial costates
-% Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
+% Stack initial condition z0 = [lambda0; x0] to integrate the 2*length(xf)-D ODE
 z0 = [lambda0; x0];
 [t, z] = ode23(@(t, z) hamiltonian_ode(t, z, funcSubs), [0 tf], z0);
 
@@ -93,10 +117,12 @@ z0 = [lambda0; x0];
 x = z(:, (length(xf)+1):end);               % states (columns correspond to [x y vx vy])
 lambda = z(:, 1:length(xf));            % costates (columns correspond to [L1 L2 L3 L4])
 
-% Compute control from costates. In this formulation the optimal control is
-u = -lambda(:, 3:4);
 
 %% Plot results: positions and control history
+load("optRndAtt_solu.mat")
+
+% Compute control from costates. In this formulation the optimal control is
+u = -lambda(:, 4:6);
 figure;
 subplot(3, 1, 1)
 plot(t, x(:, 1), 'LineWidth', 1.5), ylabel('x_1'), grid on
