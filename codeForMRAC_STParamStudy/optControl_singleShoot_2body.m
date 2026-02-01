@@ -19,7 +19,7 @@ function optControl_singleShoot_2body
 close all; clear all; clc
 
 %% Problem data
-tf = 1.5*3600*0.5;                % Final time (seconds) 
+tf = 1.6*3600*0.5;                % Final time (seconds) 
 r0 = 780+6378;
 rf = 1770+6378;
 muVal = 398600;
@@ -53,7 +53,8 @@ f = [vx; ...
      -x2*muEarth/((x1^2 + x2^2)^(3/2)) + ay; ...
      ];
 % Symbolic costate vector (4x1)
-Lvec = [L1 L2 L3 L4].';
+% Lvec = [L1 L2 L3 L4].';
+Lvec = sym('L', [length(xf) 1],'real');
 
 %% Build symbolic ODEs for states and costates using helper
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
@@ -86,6 +87,16 @@ F = shooting(lambda0_guess, x0, xf, tf, funcSubs);
 lambda0 = fsolve(@(lam0) shooting(lam0, x0, xf, tf, funcSubs), ...
     lambda0_guess, ...
     optimoptions('fsolve', 'Display', 'iter', 'MaxIterations', 30));
+
+% Use particleswarm to find lambda0 that makes the terminal state match xf
+% objfun = @(lam0) norm(shooting(lam0', x0, xf, tf, funcSubs));
+% nvars = length(lambda0_guess);
+% % lb = -[1e-2*ones(6,1)', 1e2*ones(nvars-6,1)']'; % Lower bounds (adjust as needed)
+% % ub =  [1e-2*ones(6,1)', 1e2*ones(nvars-6,1)']'; % Upper bounds (adjust as needed)
+% lb = -1e-3*ones(nvars,1);
+% ub =  1e-3*ones(nvars,1);
+% opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 3*nvars, 'MaxIterations', 40); %, "UseParallel", true);
+% lambda0 = particleswarm(objfun, nvars, lb, ub, opts);
 
 %% Integrate the Hamiltonian system with the solved initial costates
 % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE

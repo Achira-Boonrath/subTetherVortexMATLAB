@@ -130,7 +130,7 @@ Qf = diag([500, 50, 400, 40]);  % terminal state penalty (only applied at t=T)
 %% fmincon Solver Options
 % Use Sequential Quadratic Programming (SQP), which is robust for constrained optimization
 options = optimoptions('fmincon', ...
-    'Algorithm','sqp', ...           % Sequential Quadratic Programming
+    'Algorithm','interior-point', ...   % 'Algorithm','sqp', ...           % Sequential Quadratic Programming
     'Display','iter', ...             % print progress each iteration
     'MaxFunctionEvaluations', 8e5, ... % allow up to 800,000 function calls
     'MaxIterations', 500, ...          % allow up to 500 iterations
