@@ -5,15 +5,15 @@ function optControl_singleShoot_2body
 % to find the initial costates that satisfy the terminal state constraint.
 %
 % Notes:
-% - State X = [x; y; vx; vy]
-% - Control U = [ax; ay] (accelerations)
-% - Costates L = [L(1); L(2); L(3); L(4)] (co-vector associated with X)
-% - Problem: drive x0 -> xf in time tf minimizing quadratic control (implied
-%   by u = -lambda(3:4) in this formulation)
+% - State X = [x; y; z; vx; vy; vz; m] (Position, Velocity, Mass)
+% - Control U = [ux; uy; uz; u_throttle] (Thrust direction unit vector and throttle)
+% - Costates L = [lambda_r; lambda_v; lambda_m] (7x1 vector)
+% - Problem: drive x0 -> xf in time tf minimizing fuel consumption
+%   (Bang-bang control via smoothing strategy)
 %
 % This script expects helper functions in the path:
-% - odeDynAndLag    : returns symbolic xdot and Ldot expressions (dynamics and costate ODEs)
-% - hamiltonian_ode : evaluates the combined ODE for [lambda; x] given numeric z
+% - odeDynAndLag_constT : returns symbolic xdot and Ldot expressions (dynamics and costate ODEs)
+% - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 
 close all; clear all; clc
@@ -26,15 +26,16 @@ aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
 tf = period*0.5;                % Final time (seconds)
 
-x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
-xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf
+x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
 
 % Initial guess for costates (at t=0). fsolve will update this.
 % lambda0_guess = [0; 0; 0; 0; 0; 0; 0];
 lambda0_guess = 1e-5*ones(length(x0),1);
 
 %% Physical parameter
-meanMotion = 0.001;            % Mean motion n (rad/s) for CWH model
+% meanMotion = 0.001;            % Mean motion n (rad/s) - Not used in 2-Body formulation directly
+
 
 %% Define symbolic variables for deriving equations
 % State symbols (position and velocity)
@@ -46,7 +47,7 @@ X = [x; y; z; vx; vy; vz; mC];            % symbolic state vector (4x1)
 Xnum = sym('x', [length(x0) 1],'real');
 U = [ax; ay; az; u];
 
-% Define the dynamics f = dX/dt (Clohessy-Wiltshire linearized relative motion)
+% Define the dynamics f = dX/dt (Two-Body Keplerian dynamics with variable mass)
 f = [vx; ...
     vy; ...
     vz; ...
@@ -55,12 +56,17 @@ f = [vx; ...
     -z*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + az*(Tmax/mC)*u; ...
     -(Tmax/Isp*g0)*u; ...
     ];
-% Symbolic costate vector (4x1)
+% Symbolic costate vector (7x1)
 Lvec = sym('L', [length(x0) 1],'real');
 
 %% Build symbolic ODEs for states and costates using helper
+optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+             - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+             - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+             U(end)];
+
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
-[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f);
+[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, optUSet);
 
 % Compose the equations array:
 % - First the costate dynamics (Ldot)
@@ -82,14 +88,18 @@ eqns = subs( (eqns), U(end), uTest);
 % eqns = subs( (eqns), mC, 1000);
 
 eqns = simplify(eqns);
-% Build a function handle that substitutes numeric z = [lambda; x] into the
+%% Build a function handle that substitutes numeric z = [lambda; x] into the
 % symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
 funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)] );
 
 %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
 % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
 % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
-ds = hamiltonian_odeConstT(0, [x0;x0], muVal, 425, 230, 9.81, 1, uTest);
+ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, 425, 230, 9.81, 1, uTest);
+
+%check 
+dsDiff = double( funcSubs( [x0;x0*0.1]) ) - ds;
+
 muEarth=muVal;
 Tmax=425;
 Isp=230; 
@@ -125,7 +135,31 @@ x = z(:, (length(x0)+1):end);               % states (columns correspond to [x y
 lambda = z(:, 1:length(x0));            % costates (columns correspond to [L(1) L(2) L(3) L(4)])
 
 % Compute control from costates. In this formulation the optimal control is
-u = -lambda(:, 4:5);
+u = zeros(length(t), 4);
+epsilon = 1;
+for i = 1:length(t)
+    L_t = lambda(i, :)';
+    x_t = x(i, :)';
+    
+    % Direction (from optUSet structure: -L_v / norm(L_v))
+    L_v_norm = sqrt(L_t(4)^2 + L_t(5)^2 + L_t(6)^2);
+    if L_v_norm ~= 0
+        u_dir = -L_t(4:6)' / L_v_norm;
+    else
+        u_dir = [0 0 0];
+    end
+    
+    % Throttle (Switching function)
+    rho = 1 - (Isp * g0 * L_v_norm)/(x_t(7)) - L_t(7);
+    uSwitch = 0.5 - rho/(2*epsilon);
+    if rho > epsilon
+        uSwitch = 0;
+    elseif rho < - epsilon
+        uSwitch = 1;
+    end
+    
+    u(i, :) = [u_dir, uSwitch];
+end
 
 %% Plot results: positions and control history
 figure;
@@ -170,12 +204,18 @@ x_span = max(x(:,1)) - min(x(:,1));
 y_span = max(x(:,2)) - min(x(:,2));
 avg_span = (x_span + y_span) / 2;
 if avg_span == 0, avg_span = 1; end
-u_mag = sqrt(sum(u.^(2), 2));
+
+% u is [nx, ny, nz, throttle]
+% Thrust vector components for plotting: direction * throttle
+u_vec_plot = u(:, 1:3) .* u(:, 4);
+u_mag = u(:, 4); % Throttle is the magnitude factor (assuming unit direction)
+
 max_u = max(u_mag);
 if max_u == 0, scale_inv = 1; else, scale_inv = (0.15 * avg_span) / max_u; end
 
 % Initialize thrust vector (scaled)
-hThrust = quiver(x(1, 1), x(1, 2), u(1, 1)*scale_inv, u(1, 2)*scale_inv, ...
+% Plotting x-y components of thrust
+hThrust = quiver(x(1, 1), x(1, 2), u_vec_plot(1, 1)*scale_inv, u_vec_plot(1, 2)*scale_inv, ...
     'r', 'LineWidth', 2, 'MaxHeadSize', 0.5, 'AutoScale', 'off', 'DisplayName', 'Thrust Direction');
 
 legend('show', 'Location', 'best');
@@ -205,7 +245,7 @@ for k = 1:frameStep:nSteps
 
     % Update thrust vector
     set(hThrust, 'XData', x(k, 1), 'YData', x(k, 2), ...
-        'UData', u(k, 1)*scale_inv, 'VData', u(k, 2)*scale_inv);
+        'UData', u_vec_plot(k, 1)*scale_inv, 'VData', u_vec_plot(k, 2)*scale_inv);
 
     drawnow;
 
@@ -219,7 +259,7 @@ end
 addpoints(hTraj, x(end, 1), x(end, 2));
 set(hSat, 'XData', x(end, 1), 'YData', x(end, 2));
 set(hThrust, 'XData', x(end, 1), 'YData', x(end, 2), ...
-    'UData', u(end, 1)*scale_inv, 'VData', u(end, 2)*scale_inv);
+    'UData', u_vec_plot(end, 1)*scale_inv, 'VData', u_vec_plot(end, 2)*scale_inv);
 drawnow;
 writeVideo(vWriter, getframe(gcf));
 

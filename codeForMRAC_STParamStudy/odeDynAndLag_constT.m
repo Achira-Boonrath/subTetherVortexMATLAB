@@ -1,4 +1,4 @@
-function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f)
+function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f,optUSet)
     %% works if control var. are not multiplied with each other
     % 4. Compute the Jacobians (A and B matrices)
     % Compute Jacobians of the dynamics f with respect to state and control.
@@ -24,30 +24,32 @@ function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f)
     % Lvec = sym('L(t)', size(f));     % State vector [x1; x2]
     H = V + Lvec.'*f;
     
-    % -------------------------------------------------------------------------
+    %% -------------------------------------------------------------------------
     % Optimality condition: dH/dU = 0  (partial derivative of Hamiltonian wrt controls)
     % starU is the vector of partial derivatives (should be set to zero).
     % -------------------------------------------------------------------------
-    starU = jacobian(H, U);                     % dH/du (column vector)
-    % starUSolved = solve( starU, U );            % solve dH/du == 0 for the control variables
-    % fn = fieldnames(starUSolved);
-    % for k = 1:numel(fn)
-    %     optU(k)=getfield(starUSolved, fn{k});
-    % end
-    % optU = optU.';
-    
-    % Substitute the solved optimal controls back into the Hamiltonian to obtain the minimized Hamiltonian.
+    if nargin == 5
+        starU = jacobian(H, U);                     % dH/du (column vector)
+        starUSolved = solve( starU, U );            % solve dH/du == 0 for the control variables
+        fn = fieldnames(starUSolved);
+        for k = 1:numel(fn)
+            optU(k)=getfield(starUSolved, fn{k});
+        end
+        optU = optU.';
+    else
+        optU = optUSet ;
+        %[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+            % - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+            % - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+            % U(end)];
+    end
+
+    %% Substitute the solved optimal controls back into the Hamiltonian to obtain the minimized Hamiltonian.
     % The solve(...) call returns a struct with fields named after the control symbols (ax, ay).
-    % starH = subs(H, U, [starUSolved.ax, starUSolved.ay, starUSolved.az].');
-    % syms uSwitch real
-    optU =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
-            - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-            - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-            U(end)];
 
     starH =  subs(H, U, optU);
     
-    % -------------------------------------------------------------------------
+    %% -------------------------------------------------------------------------
     % From the minimized Hamiltonian starH, obtain the canonical Hamiltonian ODEs:
     %   xdot =  dH/dL   (state dynamics expressed using costates)
     %   Ldot = -dH/dx   (costate dynamics)
