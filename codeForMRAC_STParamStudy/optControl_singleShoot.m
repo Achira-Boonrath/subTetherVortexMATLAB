@@ -115,15 +115,15 @@ syms tau real                         % Symbolic variable for integration
 fun = @(tau) expm(A*(t0-tau)) * B * (B.') * expm(A.'*(t0-tau));
 g = integral(fun, 0, tf, 'ArrayValued', true);
 
-% Compute the controllability Gramian g2 for [tf, t0] (backward in time)
+% Compute the controllability Gramian g2 for [tf, t0] 
 fun2 = @(tau) expm(A*(tf-tau)) * B * (B.') * expm(A.'*(tf-tau));
 g2 = integral(fun2, 0, tf, 'ArrayValued', true);
 
 % Compute the exact optimal control using the analytical solution for LQR with fixed final state
 for jj = 1:length(t)
-    % Forward-time solution (from t0)
+    % solution (from t0)
     uExact(jj, :) = - (B') * expm(A' * (0 - t(jj))) * pinv(g) * (x0 - expm(A * (0 - tf)) * xf);
-    % Backward-time solution (from tf)
+    % solution (from tf)
     uExact2(jj, :) = - (B') * expm(A' * (tf - t(jj))) * pinv(g2) * (expm(A * (tf - t0)) * x0 - xf);
 end
 
