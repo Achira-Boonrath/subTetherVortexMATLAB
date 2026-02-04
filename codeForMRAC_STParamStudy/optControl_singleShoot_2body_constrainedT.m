@@ -33,10 +33,6 @@ xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at
 % lambda0_guess = [0; 0; 0; 0; 0; 0; 0];
 lambda0_guess = 1e-5*ones(length(x0),1);
 
-%% Physical parameter
-% meanMotion = 0.001;            % Mean motion n (rad/s) - Not used in 2-Body formulation directly
-
-
 %% Define symbolic variables for deriving equations
 % State symbols (position and velocity)
 syms x y z vx vy vz n muEarth ...
@@ -65,8 +61,9 @@ optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
              - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
              U(end)];
 
+V = U(end)'*U(end); % the instantaneous cost on the control (scalar).
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
-[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, optUSet);
+[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);
 
 % Compose the equations array:
 % - First the costate dynamics (Ldot)

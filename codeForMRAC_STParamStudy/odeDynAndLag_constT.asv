@@ -19,7 +19,7 @@ function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f, V, optUSet
     % Lvec = [L1; L2; L3; L4] are the costate (adjoint) variables multiplying the dynamics f.
     % H   = V + L' * f is the Hamiltonian used in Pontryagin's Minimum Principle.
     % -------------------------------------------------------------------------
-    if nargin < 6
+    if nargin < 5
         V = 0.5*U'*U;
     end
 
@@ -31,7 +31,7 @@ function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f, V, optUSet
     % Optimality condition: dH/dU = 0  (partial derivative of Hamiltonian wrt controls)
     % starU is the vector of partial derivatives (should be set to zero).
     % -------------------------------------------------------------------------
-    if nargin <= 6
+    if nargin > 5
         starU = jacobian(H, U);                     % dH/du (column vector)
         starUSolved = solve( starU, U );            % solve dH/du == 0 for the control variables
         fn = fieldnames(starUSolved);
@@ -41,6 +41,10 @@ function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f, V, optUSet
         optU = optU.';
     else
         optU = optUSet ;
+        %[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+            % - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+            % - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+            % U(end)];
     end
 
     %% Substitute the solved optimal controls back into the Hamiltonian to obtain the minimized Hamiltonian.

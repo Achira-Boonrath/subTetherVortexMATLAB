@@ -50,7 +50,7 @@ f = [vx; ...
 Lvec = sym('L', [length(xf) 1],'real');
 
 %% Build symbolic ODEs for states and costates using helper
-V = 0.5*U'*U; % the instantaneous cost on the control (scalar).
+V = U'*U; % the instantaneous cost on the control (scalar).
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
 [star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V);
 
@@ -102,39 +102,25 @@ n = meanMotion;
 %     [0, 0, -n^2, 0, 0, 0]];
 % B = [zeros(3,3);eye(3,3)];
 
-% Define the system matrices for the 2D CWH model
-A = [[zeros(2,2), eye(2,2)]; ...      % Top: zeros and identity for position/velocity coupling
-    [3*n^2, 0, 0, 2*n]; ...           % Bottom: CWH dynamics for x
-    [0, 0, -2*n, 0]];                 % Bottom: CWH dynamics for y
-B = [zeros(2,2); eye(2,2)];           % Control input matrix (affects acceleration states)
+A = [[zeros(2,2),eye(2,2)];...
+    [3*n^2, 0 , 0, 2*n];...
+    [0, 0, -2*n, 0]];...
+B = [zeros(2,2);eye(2,2)];
 
-t0 = 0.0;                             % Initial time
-syms tau real                         % Symbolic variable for integration
+t0 = 0.0; 
+syms tau real 
+fun = @(tau)  expm(A*(t0-tau))*B*(B.')*expm(A.'*(t0-tau));
+g = integral(fun,0,tf,'ArrayValued',true);
 
-% Compute the controllability Gramian g for [t0, tf] using matrix exponentials
-fun = @(tau) expm(A*(t0-tau)) * B * (B.') * expm(A.'*(t0-tau));
-g = integral(fun, 0, tf, 'ArrayValued', true);
-
-% Compute the controllability Gramian g2 for [tf, t0] (backward in time)
-fun2 = @(tau) expm(A*(tf-tau)) * B * (B.') * expm(A.'*(tf-tau));
-g2 = integral(fun2, 0, tf, 'ArrayValued', true);
-
-% Compute the exact optimal control using the analytical solution for LQR with fixed final state
-for jj = 1:length(t)
-    % Forward-time solution (from t0)
-    uExact(jj, :) = - (B') * expm(A' * (0 - t(jj))) * pinv(g) * (x0 - expm(A * (0 - tf)) * xf);
-    % Backward-time solution (from tf)
-    uExact2(jj, :) = - (B') * expm(A' * (tf - t(jj))) * pinv(g2) * (expm(A * (tf - t0)) * x0 - xf);
+for jj = [1:length(t)]
+    % uExact(jj,:) = - (B')*expm(A'*(0-t(jj)))*pinv(g)*( x0 - expm(A*(0-tf))*xf );
+    uExact(jj,:) = - (B')*expm(A'*(tf-t(jj)))*pinv(g)*( expm(A*(tf-t0))*x0 - xf );
 end
 
-% Plot the relative error between the numerically computed and exact controls
 figure;
-plot((u - uExact) ./ uExact)
-hold on
-plot((u - uExact2) ./ uExact2)
+plot((u - uExact)/uExact)
 grid minor
-title('Relative Error: (u - uExact) / uExact')
-
+title('u - uExact')
 %% Plot results: positions and control history
 figure;
 subplot(3, 1, 1)
