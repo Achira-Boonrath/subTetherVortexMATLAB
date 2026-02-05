@@ -16,9 +16,23 @@ function optControl_singleShoot_2body
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 
+%%
 close all; clear all; clc
+% Parameters
+mu = 3.98600;     % Earth [m^3/s^2]
+at = 7000;             % semi-major axis [m]
+et = 0.1;                % eccentricity
+it = deg2rad(30);        % inclination
+Omega_t = deg2rad(40);   % RAAN
+omega_t = deg2rad(60);   % argument of periapsis
+theta_f = deg2rad(120);  % true anomaly
+
+% Compute terminal state
+[xf, rf, vf] = StatesInECI( ...
+    theta_f, at, et, it, Omega_t, omega_t, mu);
 
 %% Problem data
+close all; clear all; clc
 r0 = 780+6378;
 rf = 1770+6378;
 muVal = 398600;
@@ -182,7 +196,6 @@ hold on; axis equal; grid on;
 h = 0; % x-coordinate of center
 k = 0; % y-coordinate of center
 
-
 % Implicit equation: (x-h)^(2) + (y-k)^(2) - r^(2) = 0
 
 xlabel('x (m)'); ylabel('y (m)');
@@ -321,3 +334,4 @@ function F = shootingConstT(lambda0,x0,xf,tf, muEarth, Tmax, Isp, g0, epsilon)
     F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0))];  % terminal error
 
 end
+

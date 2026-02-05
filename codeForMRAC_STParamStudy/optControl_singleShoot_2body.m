@@ -58,7 +58,7 @@ Lvec = sym('L', [length(xf) 1],'real');
 
 %% Build symbolic ODEs for states and costates using helper
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
-[star_xdot, star_Ldot] = odeDynAndLag(Lvec, X, Xnum, U, f);
+[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f);
 
 % Compose the equations array:
 % - First the costate dynamics (Ldot)
