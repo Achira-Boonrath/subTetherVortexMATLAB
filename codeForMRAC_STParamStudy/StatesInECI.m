@@ -24,8 +24,8 @@ r_mag = p / (1 + et*cos(theta_f));
 
 % Position in perifocal frame
 r_pf = r_mag * ...
-    [ sin(theta_f);
-      cos(theta_f);
+    [ cos(theta_f);
+      sin(theta_f);
       0 ];
 
 % Velocity scaling
