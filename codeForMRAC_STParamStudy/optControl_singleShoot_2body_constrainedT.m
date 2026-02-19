@@ -15,24 +15,43 @@ function optControl_singleShoot_2body
 % - odeDynAndLag_constT : returns symbolic xdot and Ldot expressions (dynamics and costate ODEs)
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
+close all; clear all; clc
+propulsionType = 'chemical'; % Options: 'chemical', 'electric'
+%% 
+
+% System Parameters:
+%     Tmax = 0.1 N
+%     Isp = 3000 s
+%     mu = 398600.4418 km3/s2 
+%     m0 = 1000 kg
+% 
+% Initial state (cartesian)
+%     x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225]
+% Target orbital elements [sma, ecc, inc, ape, ran] (angles in degrees)
+%     oet = [42164.0, 0.001, 2.0, 0, 0, 0]
+% 
+% Unknowns corresponding to solution:
+%     u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.04557325107502537, -0.055654206847527754, 0.9974094630699921, 5.166976235952729e-7, 0.8069069128203797, 9345.775854692882]
+% 
+%     NOTE: first 7 elements are the initial time costates, the 8th element is the insertion true anomaly, the 9th is the time-of-flight
 
 %%
-close all; clear all; clc
-% Parameters
-mu = 3.98600;     % Earth [m^3/s^2]
-at = 7000;             % semi-major axis [m]
-et = 0.1;                % eccentricity
-it = deg2rad(30);        % inclination
-Omega_t = deg2rad(40);   % RAAN
-omega_t = deg2rad(60);   % argument of periapsis
-theta_f = deg2rad(120);  % true anomaly
 
-% Compute terminal state
+% Parameters
+% muVal = 398600.4418;     % Earth 
+% at = 42164.0;             % semi-major axis [km]
+% et = 0.001;                % eccentricity
+% it = deg2rad(2.0);        % inclination
+% Omega_t = deg2rad(0);   % RAAN
+% omega_t = deg2rad(0);   % argument of periapsis
+% theta_f = deg2rad(46);  % true anomaly
+% 
+% % Compute terminal state
 [xf, rf, vf] = StatesInECI( ...
-    theta_f, at, et, it, Omega_t, omega_t, mu);
+    theta_f, at, et, it, Omega_t, omega_t, muVal);
 
 %% Problem data
-close all; clear all; clc
+
 r0 = 780+6378;
 rf = 1770+6378;
 muVal = 398600;
@@ -43,11 +62,20 @@ tf = period*0.5;                % Final time (seconds)
 x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
 
-% Initial guess for costates (at t=0). fsolve will update this.
-% lambda0_guess = [0; 0; 0; 0; 0; 0; 0];
-lambda0_guess = 1e-5*ones(length(x0),1);
+%% Problem data
+% x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+% xf = [xf; 800];             % Desired terminal state at t = tf (Mass is free)
+% tf = 9345.775854692882*1.25;
+% 
+% r0 = norm(x0(1:3));
+% rf = norm(xf(1:3));
+% % Initial guess for costates (at t=0). fsolve will update this.
+% % lambda0_guess = [0; 0; 0; 0; 0; 0; 0];
+% lambda0_guess = 1e-5*ones(length(x0),1);
 
 %% Define symbolic variables for deriving equations
+lambda0_guess = 1e-5*ones(length(x0),1);
+
 % State symbols (position and velocity)
 syms x y z vx vy vz n muEarth ...
     ax ay az u mC Tmax Isp g0 real
@@ -75,7 +103,7 @@ optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
              - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
              U(end)];
 
-V = U(end)'*U(end); % the instantaneous cost on the control (scalar).
+V = 0.5*U(end)'*U(end); % the instantaneous cost on the control (scalar).
 % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
 [star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);
 
@@ -92,8 +120,19 @@ eqns = simplify(eqns);
 % Substitute the numeric value for mean motion to simplify expressions
 uTest = 1;
 eqns = subs( (eqns), muEarth, muVal);
-eqns = subs( (eqns), Tmax, 425);
-eqns = subs( (eqns), Isp, 230);
+
+% Symbolic substitution based on propulsion type
+switch propulsionType
+    case 'chemical'
+        % chem prop
+        eqns = subs( (eqns), Tmax, 425);
+        eqns = subs( (eqns), Isp, 230);
+    case 'electric'
+        % electric prop
+        eqns = subs( (eqns), Tmax, 0.1);
+        eqns = subs( (eqns), Isp, 3000);
+end
+
 eqns = subs( (eqns), g0, 9.81);
 eqns = subs( (eqns), U(end), uTest);
 % eqns = subs( (eqns), mC, 1000);
@@ -106,39 +145,87 @@ funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)
 %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
 % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
 % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
-ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, 425, 230, 9.81, 1, uTest);
+
+muEarth=muVal;
+
+switch propulsionType
+    case 'chemical'
+        Tmax=425;
+        Isp=230; 
+    case 'electric'
+        Tmax=0.1;
+        Isp=3000;
+        
+        % Additional parameters for electric prop
+        at = 42164.0;             % semi-major axis [km]
+        et = 0.001;                % eccentricity
+        it = deg2rad(2.0);        % inclination
+        Omega_t = deg2rad(0);   % RAAN
+        omega_t = deg2rad(0);   % argument of periapsis
+end 
+
+g0=9.81;
+epsilon=1;
+ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, Tmax, Isp, g0, epsilon, uTest);
 
 %check 
 dsDiff = double( funcSubs( [x0;x0*0.1]) ) - ds;
 
-muEarth=muVal;
-Tmax=425;
-Isp=230; 
-g0=9.81;
-epsilon=1;
 %% Solve two-point boundary value problem via shootingConstT
 % First try a single invocation of shootingConstT with the initial guess
-F = shootingConstT(lambda0_guess, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
 
+switch propulsionType
+    case 'chemical'
+        F = shootingConstT(lambda0_guess, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
+    case 'electric'
+        % Update lambda0_guess for electric case (adds theta_f)
+        lambda0_guess = [lambda0_guess; pi/2];
+        F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+end
 %%  Use particleswarm to find lambda0 that makes the terminal state match xf
-objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
+
+switch propulsionType
+    case 'chemical'
+        objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
+    case 'electric'
+        objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
+end
+
 nvars = length(lambda0_guess);
-% lb = -[1e-2*ones(6,1)', 1e2*ones(nvars-6,1)']'; % Lower bounds (adjust as needed)
-% ub =  [1e-2*ones(6,1)', 1e2*ones(nvars-6,1)']'; % Upper bounds (adjust as needed)
-lb = -1e-5*ones(nvars,1);
-ub =  1e-5*ones(nvars,1);
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 3*nvars, 'MaxIterations', 90); %, "UseParallel", true);
+
+switch propulsionType
+    case 'chemical'
+        lb = -1.0e-5*ones(nvars,1);
+        ub =  1.0e-5*ones(nvars,1);
+    case 'electric'
+        lb = -[1e-0*ones(nvars-1,1)', 0]';
+        ub =  [1e-0*ones(nvars-1,1)', pi/2]';
+end
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 100, 'MaxIterations', 90); %, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
-lambda0 = fsolve(@(lam0) shootingConstT(lam0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon), ...
-    lambda0_guess, ...
-    optimoptions('fsolve', 'Display', 'iter'));
-    % optimoptions('fsolve', 'Display', 'iter', 'MaxIterations', 90));
+switch propulsionType
+    case 'chemical'
+        lambda0 = fsolve(@(lam0) shootingConstT(lam0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon), ...
+            lambda0_guess, ...
+            optimoptions('fsolve', 'Display', 'iter'));
+    case 'electric'
+        lambda0 = fsolve(@(lam0) shootingConstTFreeTheta(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t), ...
+            lambda0_guess, ...
+            optimoptions('fsolve', 'Display', 'iter'));
+end
 
 %% Integrate the Hamiltonian system with the solved initial costates
 % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
-z0 = [lambda0; x0];
+% z0 = [lambda0; x0];
+switch propulsionType
+    case 'chemical'
+        z0 = [lambda0; x0];
+    case 'electric'
+        z0 = [lambda0(1:end-1); x0];
+end
+
 [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), [0 tf], z0);
 
 % Extract state and costate trajectories from integrated z
@@ -259,7 +346,7 @@ for k = 1:frameStep:nSteps
 
     drawnow;
 
-    viscircles([0 0; 0 0],[r0 rf])
+    viscircles([0 0; 0 0],[r0 rf],'LineStyle','--');
     axis equal;
     % Capture frame for video
     frame = getframe(gcf);
@@ -278,60 +365,91 @@ fprintf('Animation saved to %s\n', videoFilename);
 
 end
 
-function ds = hamiltonian_odeConstT(t, s, muEarth, Tmax, Isp, g0, epsilon, uFixed)
+% function ds = hamiltonian_odeConstT(t, s, muEarth, Tmax, Isp, g0, epsilon, uFixed)
+% 
+% L = s(1:7);               % states (columns correspond to [x y vx vy])
+% x = s(8:end);            % costates (columns correspond to [L(1) L(2) L(3) L(4)])
+% nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));
+% nPos = (x(1)^(2) + x(2)^(2) + x(3)^(2));
+% 
+% rho = 1 - (Isp * g0 * nLv)/(x(7)) - L(7);
+% 
+% uSwitch = 0.5 - rho/(2*epsilon);
+% if rho > epsilon
+% uSwitch = 0;
+% elseif rho < - epsilon
+% uSwitch = 1;
+% end
+% 
+% if nargin == 8
+%     uSwitch = uFixed;
+% end
+% 
+% Tmag = Tmax*uSwitch;
+% 
+% ds = zeros(length(s),1);
+% ds(1) = -(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2);
+% ds(2) = -(muEarth*(- L(5)*x(1)^(2) + 3*L(4)*x(1)*x(2) + 2*L(5)*x(2)^(2) + 3*L(6)*x(2)*x(3) - L(5)*x(3)^(2)))/nPos^(5/2);
+% ds(3) = -(muEarth*(- L(6)*x(1)^(2) + 3*L(4)*x(1)*x(3) - L(6)*x(2)^(2) + 3*L(5)*x(2)*x(3) + 2*L(6)*x(3)^(2)))/nPos^(5/2);
+% ds(4) = -L(1);
+% ds(5) = -L(2);
+% ds(6) = -L(3);
+% ds(7) = -(Tmag*nLv^(1/2))/x(7)^(2);
+% ds(8) = x(4);
+% ds(9) = x(5);
+% ds(10) =x(6);
+% ds(11) =L(4)/nLv - L(4)*((Tmag)/(x(7)*nLv^(1/2)) - (L(4)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(4)^3/nLv^(2)...
+%     - (L(4)*L(5)^(2))/nLv^(2) - (L(4)*L(6)^(2))/nLv^(2) - (muEarth*x(1))/nPos^(3/2)...
+%     - (L(4)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)*L(5)^(2)*Tmag)/(x(7)*nLv^(3/2)) + (L(4)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
+% ds(12) =L(5)/nLv - L(5)*((Tmag)/(x(7)*nLv^(1/2)) - (L(5)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(5)^3/nLv^(2)...
+%     - (L(4)^(2)*L(5))/nLv^(2) - (L(5)*L(6)^(2))/nLv^(2) - (muEarth*x(2))/nPos^(3/2)...
+%     - (L(5)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(5)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
+% ds(13) =L(6)/nLv - L(6)*((Tmag)/(x(7)*nLv^(1/2)) - (L(6)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(6)^3/nLv^(2)...
+%     - (L(4)^(2)*L(6))/nLv^(2) - (L(5)^(2)*L(6))/nLv^(2) - (muEarth*x(3))/nPos^(3/2)...
+%     - (L(6)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2));
+% ds(14) =-(Tmag*g0)/Isp;
+% 
+% end
 
-L = s(1:7);               % states (columns correspond to [x y vx vy])
-x = s(8:end);            % costates (columns correspond to [L(1) L(2) L(3) L(4)])
-nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));
-nPos = (x(1)^(2) + x(2)^(2) + x(3)^(2));
+% function F = shootingConstT(lambda0,x0,xf,tf, muEarth, Tmax, Isp, g0, epsilon)
+% 
+%     z0 = [lambda0; x0];
+% 
+%     [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon),[0 tf],z0);
+% 
+%     x_tf = z(end,end-length(x0)+1:end).';
+%     F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0))];  % terminal error
+% 
+% end
 
-rho = 1 - (Isp * g0 * nLv)/(x(7)) - L(7);
 
-uSwitch = 0.5 - rho/(2*epsilon);
-if rho > epsilon
-uSwitch = 0;
-elseif rho < - epsilon
-uSwitch = 1;
-end
+function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)
 
-if nargin == 8
-    uSwitch = uFixed;
-end
-
-Tmag = Tmax*uSwitch;
-
-ds = zeros(length(s),1);
-ds(1) = -(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2);
-ds(2) = -(muEarth*(- L(5)*x(1)^(2) + 3*L(4)*x(1)*x(2) + 2*L(5)*x(2)^(2) + 3*L(6)*x(2)*x(3) - L(5)*x(3)^(2)))/nPos^(5/2);
-ds(3) = -(muEarth*(- L(6)*x(1)^(2) + 3*L(4)*x(1)*x(3) - L(6)*x(2)^(2) + 3*L(5)*x(2)*x(3) + 2*L(6)*x(3)^(2)))/nPos^(5/2);
-ds(4) = -L(1);
-ds(5) = -L(2);
-ds(6) = -L(3);
-ds(7) = -(Tmag*nLv^(1/2))/x(7)^(2);
-ds(8) = x(4);
-ds(9) = x(5);
-ds(10) =x(6);
-ds(11) =L(4)/nLv - L(4)*((Tmag)/(x(7)*nLv^(1/2)) - (L(4)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(4)^3/nLv^(2)...
-    - (L(4)*L(5)^(2))/nLv^(2) - (L(4)*L(6)^(2))/nLv^(2) - (muEarth*x(1))/nPos^(3/2)...
-    - (L(4)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)*L(5)^(2)*Tmag)/(x(7)*nLv^(3/2)) + (L(4)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-ds(12) =L(5)/nLv - L(5)*((Tmag)/(x(7)*nLv^(1/2)) - (L(5)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(5)^3/nLv^(2)...
-    - (L(4)^(2)*L(5))/nLv^(2) - (L(5)*L(6)^(2))/nLv^(2) - (muEarth*x(2))/nPos^(3/2)...
-    - (L(5)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(5)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-ds(13) =L(6)/nLv - L(6)*((Tmag)/(x(7)*nLv^(1/2)) - (L(6)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(6)^3/nLv^(2)...
-    - (L(4)^(2)*L(6))/nLv^(2) - (L(5)^(2)*L(6))/nLv^(2) - (muEarth*x(3))/nPos^(3/2)...
-    - (L(6)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2));
-ds(14) =-(Tmax*g0*uSwitch)/Isp;
-
-end
-
-function F = shootingConstT(lambda0,x0,xf,tf, muEarth, Tmax, Isp, g0, epsilon)
-
-    z0 = [lambda0; x0];
-    
+    z0 = [lambda0(1:end-1); x0];
+    theta_f = lambda0(end);
     [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon),[0 tf],z0);
     
+    zdot0 = hamiltonian_odeConstT(0, z0, muEarth, Tmax, Isp, g0, epsilon);
+    lambdaHat0 = [lambda0(1:end-1); - lambda0(1:end-1)'*zdot0(end-length(x0)+1:end)];
+    unitCostate = norm(lambdaHat0) -1;
+
+    [xf, rf, vf] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
+    cFinal = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, muVal);
+
     x_tf = z(end,end-length(x0)+1:end).';
-    F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0))];  % terminal error
+    % F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    %     cFinal];  % terminal error
+    F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+        cFinal];  % terminal error
 
 end
 
+function F = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, mu)
+
+F = [-(at*(et^2 - 1)*(et*cos(Omega_t)*cos(omega_t) + cos(Omega_t)*sin(omega_t)*sin(theta_f) - et*sin(Omega_t)*cos(it)*sin(omega_t) + sin(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f)) + at*cos(theta_f)*(cos(Omega_t)*cos(omega_t) - sin(Omega_t)*cos(it)*sin(omega_t))*(et^2 - 1))/(et*cos(theta_f) + 1)^2;...
+-(at*(et^2 - 1)*(et*sin(Omega_t)*cos(omega_t) + sin(Omega_t)*sin(omega_t)*sin(theta_f) + et*cos(Omega_t)*cos(it)*sin(omega_t) - cos(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f)) + at*cos(theta_f)*(sin(Omega_t)*cos(omega_t) + cos(Omega_t)*cos(it)*sin(omega_t))*(et^2 - 1))/(et*cos(theta_f) + 1)^2;...
+                                                                                                                                                                                                          -(at*sin(it)*(sin(omega_t - theta_f) + et*sin(omega_t))*(et^2 - 1))/(et*cos(theta_f) + 1)^2;...
+                                                                                 ((mu/at)^(1/2)*(cos(Omega_t)*sin(omega_t)*sin(theta_f) - cos(Omega_t)*cos(omega_t)*cos(theta_f) + sin(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f) + sin(Omega_t)*cos(it)*cos(theta_f)*sin(omega_t)))/(1 - et^2)^(1/2);...
+                                                                                -((mu/at)^(1/2)*(sin(Omega_t)*cos(omega_t)*cos(theta_f) - sin(Omega_t)*sin(omega_t)*sin(theta_f) + cos(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f) + cos(Omega_t)*cos(it)*cos(theta_f)*sin(omega_t)))/(1 - et^2)^(1/2);...
+                                                                                                                                                                                                                                     -(sin(omega_t + theta_f)*sin(it)*(mu/at)^(1/2))/(1 - et^2)^(1/2)];
+end

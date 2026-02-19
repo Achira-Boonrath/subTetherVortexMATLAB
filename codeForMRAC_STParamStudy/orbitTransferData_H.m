@@ -1,0 +1,207 @@
+function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
+    close all; 
+    %% 
+    
+    
+    %% Problem data
+    
+    % r0 = 780+6378;
+    % rf = 1770+6378;
+    muVal = 398600;
+    % aTrans = (r0 + rf)/2;
+    % period = 2*pi*sqrt( (aTrans^3) /muVal  );
+    theta_f = deg2rad(theta_f);
+    et = 0;
+    %%
+    x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+    % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
+    rf = at;
+    % Radius magnitude
+    p = at * (1 - et^2);
+    r_mag = p / (1 + et*cos(theta_f));
+    
+    % Position in perifocal frame
+    r_pf = r_mag * ...
+    [ cos(theta_f);
+      sin(theta_f);
+      0 ];
+    
+    % Velocity scaling
+    v_scale = sqrt(muVal / p);
+    
+    % Velocity in perifocal frame
+    v_pf = v_scale * ...
+    [ -sin(theta_f);
+      et + cos(theta_f);
+      0 ];
+
+    % Terminal state
+    xf = [r_pf; v_pf;800];
+
+    aTrans = (rf + r0)/2;
+    period = 2*pi*sqrt( (aTrans^3) /muVal  );
+    tf = period*(theta_f/(2*pi));                % Final time (seconds)
+    
+    %% Define symbolic variables for deriving equations
+    lambda0_guess = 1e-4*ones(length(x0),1);
+    
+    % State symbols (position and velocity)
+    syms x y z vx vy vz n muEarth ...
+        ax ay az u mC Tmax Isp g0 real
+    
+    % Build state and control symbolic vectors for clarity
+    X = [x; y; z; vx; vy; vz; mC];            % symbolic state vector (4x1)
+    Xnum = sym('x', [length(x0) 1],'real');
+    U = [ax; ay; az; u];
+    
+    % Define the dynamics f = dX/dt (Two-Body Keplerian dynamics with variable mass)
+    f = [vx; ...
+        vy; ...
+        vz; ...
+        -x*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ax*(Tmax/mC)*u; ...
+        -y*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ay*(Tmax/mC)*u; ...
+        -z*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + az*(Tmax/mC)*u; ...
+        -(Tmax/Isp*g0)*u; ...
+        ];
+    % Symbolic costate vector (7x1)
+    Lvec = sym('L', [length(x0) 1],'real');
+    
+    %% Build symbolic ODEs for states and costates using helper
+    optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+                 - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+                 - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
+                 U(end)];
+    
+    V = 0.5*U(end)'*U(end); % the instantaneous cost on the control (scalar).
+    % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
+    [star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);
+    
+    % Compose the equations array:
+    % - First the costate dynamics (Ldot)
+    % - Then the state dynamics (xdot)
+    % This ordering matches how we will stack z = [lambda; x] for integration.
+    eqns = [
+        (star_Ldot).',         % costate ODEs (row)
+        (star_xdot).'          % state ODEs (row)
+        ];
+    eqns = simplify(eqns);
+    
+    % Substitute the numeric value for mean motion to simplify expressions
+    uTest = 1;
+    eqns = subs( (eqns), muEarth, muVal);
+    
+    % chem prop
+    eqns = subs( (eqns), Tmax, 425*4);
+    eqns = subs( (eqns), Isp, 230);
+    
+    % electric prop
+    % eqns = subs( (eqns), Tmax, 0.1);
+    % eqns = subs( (eqns), Isp, 3000);
+    
+    eqns = subs( (eqns), g0, 9.81);
+    eqns = subs( (eqns), U(end), uTest);
+    % eqns = subs( (eqns), mC, 1000);
+    
+    eqns = simplify(eqns);
+    %% Build a function handle that substitutes numeric z = [lambda; x] into the
+    % symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
+    funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)] );
+    
+    %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
+    % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
+    % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
+    
+    muEarth=muVal;
+    
+    % chem prop
+    Tmax=425*4;
+    Isp=230; 
+    
+    % electric prop
+    % Tmax=0.1;
+    % Isp=3000; 
+    
+    g0=9.81;
+    epsilon=1;
+    ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, Tmax, Isp, g0, epsilon, uTest);
+    
+    %check 
+    dsDiff = double( funcSubs( [x0;x0*0.1]) ) - ds;
+    
+    %% Solve two-point boundary value problem via shootingConstT
+    % First try a single invocation of shootingConstT with the initial guess
+    
+    % chem prop
+    F = shootingConstT(lambda0_guess, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
+    
+    % electric prop
+    % lambda0_guess = [lambda0_guess; pi/2];
+    % F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+    %%  Use particleswarm to find lambda0 that makes the terminal state match xf
+    
+    % objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
+    % chem prop
+    objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
+    
+    % electric prop
+    % objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
+    
+    nvars = length(lambda0_guess);
+
+    theta_f = 0;
+    et = (rf - r0)/(rf + r0);
+    p = aTrans * (1 - et^2);
+
+    % Velocity scaling
+    v_scale = sqrt(muVal / p);
+
+    % Velocity in perifocal frame
+    v_pf = v_scale * ...
+    [ -sin(theta_f);
+      et + cos(theta_f);
+      0 ];
+    % sqrt(muVal/rf)
+    x0(4:6) = v_pf;
+
+        % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
+    % z0 = [lambda0; x0];
+    % chem prop
+    z0 = [1e-11*lambda0_guess; x0];
+
+    % electric prop
+    % z0 = [lambda0(1:end-1); x0];
+    timeFinal = linspace(0, tf, 50);
+    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0);
+
+    %%
+    % Extract state and costate trajectories from integrated z
+    x = z(:, (length(x0)+1):end);               % states (columns correspond to [x y vx vy])
+    lambda = z(:, 1:length(x0));            % costates (columns correspond to [L(1) L(2) L(3) L(4)])
+    
+    % Compute control from costates. In this formulation the optimal control is
+    u = zeros(length(t), 4);
+    epsilon = 1;
+    for i = 1:length(t)
+        L_t = lambda(i, :)';
+        x_t = x(i, :)';
+        
+        % Direction (from optUSet structure: -L_v / norm(L_v))
+        L_v_norm = sqrt(L_t(4)^2 + L_t(5)^2 + L_t(6)^2);
+        if L_v_norm ~= 0
+            u_dir = -L_t(4:6)' / L_v_norm;
+        else
+            u_dir = [0 0 0];
+        end
+        
+        % Throttle (Switching function)
+        rho = 1 - (Isp * g0 * L_v_norm)/(x_t(7)) - L_t(7);
+        uSwitch = 0.5 - rho/(2*epsilon);
+        if rho > epsilon
+            uSwitch = 0;
+        elseif rho < - epsilon
+            uSwitch = 1;
+        end
+        
+        u(i, :) = [u_dir, uSwitch];
+    end
+end

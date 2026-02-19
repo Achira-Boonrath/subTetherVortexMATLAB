@@ -7,11 +7,11 @@ function [star_xdot,star_Ldot] = odeDynAndLag_constT(Lvec,X,Xnum,U,f, V, optUSet
     B = jacobian(f, U);
     
     % Display the symbolic A and B matrices so the user can inspect linearized dynamics.
-    disp('State Matrix A (Jacobian wrt State):')
-    disp(A)
-    
-    disp('Input Matrix B (Jacobian wrt Control):')
-    disp(B)
+    % disp('State Matrix A (Jacobian wrt State):')
+    % disp(A)
+    % 
+    % disp('Input Matrix B (Jacobian wrt Control):')
+    % disp(B)
     
     % -------------------------------------------------------------------------
     % Form the Hamiltonian for an optimal-control problem with quadratic control cost.
