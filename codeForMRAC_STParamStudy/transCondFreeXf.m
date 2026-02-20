@@ -22,8 +22,8 @@ r_mag = p / (1 + et*cos(theta_f));
 
 % Perifocal position
 r_pf = r_mag * ...
-    [ sin(theta_f);
-      cos(theta_f);
+    [ cos(theta_f);
+      sin(theta_f);
       0 ];
 
 % ECI position
