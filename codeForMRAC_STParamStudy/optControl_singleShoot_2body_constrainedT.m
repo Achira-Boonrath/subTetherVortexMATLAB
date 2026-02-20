@@ -47,13 +47,13 @@ propulsionType = 'chemical'; % Options: 'chemical', 'electric'
 % theta_f = deg2rad(46);  % true anomaly
 % 
 % % Compute terminal state
-[xf, rf, vf] = StatesInECI( ...
-    theta_f, at, et, it, Omega_t, omega_t, muVal);
+% [xf, rf, vf] = StatesInECI( ...
+%     theta_f, at, et, it, Omega_t, omega_t, muVal);
 
 %% Problem data
 
 r0 = 780+6378;
-rf = 1770+6378;
+rf = 5770+6378;
 muVal = 398600;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
@@ -125,7 +125,7 @@ eqns = subs( (eqns), muEarth, muVal);
 switch propulsionType
     case 'chemical'
         % chem prop
-        eqns = subs( (eqns), Tmax, 425);
+        eqns = subs( (eqns), Tmax, 425*10);
         eqns = subs( (eqns), Isp, 230);
     case 'electric'
         % electric prop
@@ -150,7 +150,7 @@ muEarth=muVal;
 
 switch propulsionType
     case 'chemical'
-        Tmax=425;
+        Tmax=425*10;
         Isp=230; 
     case 'electric'
         Tmax=0.1;
@@ -195,8 +195,8 @@ nvars = length(lambda0_guess);
 
 switch propulsionType
     case 'chemical'
-        lb = -1.0e-5*ones(nvars,1);
-        ub =  1.0e-5*ones(nvars,1);
+        lb = -1.0e-3*ones(nvars,1);
+        ub =  1.0e-3*ones(nvars,1);
     case 'electric'
         lb = -[1e-0*ones(nvars-1,1)', 0]';
         ub =  [1e-0*ones(nvars-1,1)', pi/2]';
@@ -364,64 +364,6 @@ close(vWriter);
 fprintf('Animation saved to %s\n', videoFilename);
 
 end
-
-% function ds = hamiltonian_odeConstT(t, s, muEarth, Tmax, Isp, g0, epsilon, uFixed)
-% 
-% L = s(1:7);               % states (columns correspond to [x y vx vy])
-% x = s(8:end);            % costates (columns correspond to [L(1) L(2) L(3) L(4)])
-% nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));
-% nPos = (x(1)^(2) + x(2)^(2) + x(3)^(2));
-% 
-% rho = 1 - (Isp * g0 * nLv)/(x(7)) - L(7);
-% 
-% uSwitch = 0.5 - rho/(2*epsilon);
-% if rho > epsilon
-% uSwitch = 0;
-% elseif rho < - epsilon
-% uSwitch = 1;
-% end
-% 
-% if nargin == 8
-%     uSwitch = uFixed;
-% end
-% 
-% Tmag = Tmax*uSwitch;
-% 
-% ds = zeros(length(s),1);
-% ds(1) = -(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2);
-% ds(2) = -(muEarth*(- L(5)*x(1)^(2) + 3*L(4)*x(1)*x(2) + 2*L(5)*x(2)^(2) + 3*L(6)*x(2)*x(3) - L(5)*x(3)^(2)))/nPos^(5/2);
-% ds(3) = -(muEarth*(- L(6)*x(1)^(2) + 3*L(4)*x(1)*x(3) - L(6)*x(2)^(2) + 3*L(5)*x(2)*x(3) + 2*L(6)*x(3)^(2)))/nPos^(5/2);
-% ds(4) = -L(1);
-% ds(5) = -L(2);
-% ds(6) = -L(3);
-% ds(7) = -(Tmag*nLv^(1/2))/x(7)^(2);
-% ds(8) = x(4);
-% ds(9) = x(5);
-% ds(10) =x(6);
-% ds(11) =L(4)/nLv - L(4)*((Tmag)/(x(7)*nLv^(1/2)) - (L(4)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(4)^3/nLv^(2)...
-%     - (L(4)*L(5)^(2))/nLv^(2) - (L(4)*L(6)^(2))/nLv^(2) - (muEarth*x(1))/nPos^(3/2)...
-%     - (L(4)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)*L(5)^(2)*Tmag)/(x(7)*nLv^(3/2)) + (L(4)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-% ds(12) =L(5)/nLv - L(5)*((Tmag)/(x(7)*nLv^(1/2)) - (L(5)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(5)^3/nLv^(2)...
-%     - (L(4)^(2)*L(5))/nLv^(2) - (L(5)*L(6)^(2))/nLv^(2) - (muEarth*x(2))/nPos^(3/2)...
-%     - (L(5)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(5)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-% ds(13) =L(6)/nLv - L(6)*((Tmag)/(x(7)*nLv^(1/2)) - (L(6)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(6)^3/nLv^(2)...
-%     - (L(4)^(2)*L(6))/nLv^(2) - (L(5)^(2)*L(6))/nLv^(2) - (muEarth*x(3))/nPos^(3/2)...
-%     - (L(6)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2));
-% ds(14) =-(Tmag*g0)/Isp;
-% 
-% end
-
-% function F = shootingConstT(lambda0,x0,xf,tf, muEarth, Tmax, Isp, g0, epsilon)
-% 
-%     z0 = [lambda0; x0];
-% 
-%     [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon),[0 tf],z0);
-% 
-%     x_tf = z(end,end-length(x0)+1:end).';
-%     F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0))];  % terminal error
-% 
-% end
-
 
 function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)
 

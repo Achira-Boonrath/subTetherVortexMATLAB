@@ -170,9 +170,29 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
 
     % electric prop
     % z0 = [lambda0(1:end-1); x0];
-    timeFinal = linspace(0, tf, 50);
-    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0);
 
+    % options = odeset('RelTol', 1e-7,'AbsTol', 1e-7,'Stats','off');
+    options = odeset('Stats','off');
+    % Init orbit
+    z0Init = [1e-11*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
+    periodInit = 2*pi*sqrt( (r0^3) /muVal  );
+    timeFinalInit = linspace(0, periodInit, 50);
+    [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
+
+    % transfer orbit
+    timeFinal = linspace(0, tf, 50) ;
+    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
+    t = t + tInit(end);
+
+    % F orbit
+    z0F = [1e-11*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
+    periodF = 2*pi*sqrt( (rf^3) /muVal  );
+    timeFinalF = linspace(0, periodF, 50) ;
+    [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, options);
+    tF = tF + t(end);
+    
+    z = [zInit; z; zF];
+    t = [tInit; t; tF];
     %%
     % Extract state and costate trajectories from integrated z
     x = z(:, (length(x0)+1):end);               % states (columns correspond to [x y vx vy])
