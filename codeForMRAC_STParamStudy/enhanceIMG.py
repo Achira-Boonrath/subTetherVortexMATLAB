@@ -311,7 +311,7 @@ def main():
     upsampler = init_realesrgan()
     
     # Extensions to search for. Add/remove types as needed.
-    extensions = ['*.jpg', '*.jpeg', '*.png', '*.hevc', '*.h265', '*.mp4']
+    extensions = ['*.jpg', '*.jpeg', '*.heic', '*.png', '*.hevc', '*.h265', '*.mp4']
     files = []
     for ext in extensions:
         # glob returns matching filepaths in INPUT_DIR for each extension
@@ -322,7 +322,7 @@ def main():
     for file_path in files:
         # Route images and videos to their respective handlers.
         # We include '.png' explicitly to process transparency-enabled images.
-        if file_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.heic')):
             process_image(file_path, OUTPUT_DIR, upsampler)
         elif file_path.lower().endswith(('.hevc', '.h265', '.mp4')):
             process_video(file_path, OUTPUT_DIR, upsampler)
