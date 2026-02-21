@@ -176,18 +176,18 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     % Init orbit
     z0Init = [1e-11*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
     periodInit = 2*pi*sqrt( (r0^3) /muVal  );
-    timeFinalInit = linspace(0, periodInit, 50);
+    timeFinalInit = linspace(0, periodInit, 40);
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
 
     % transfer orbit
-    timeFinal = linspace(0, tf, 50) ;
+    timeFinal = linspace(0, tf, 40) ;
     [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
     t = t + tInit(end);
 
     % F orbit
     z0F = [1e-11*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
     periodF = 2*pi*sqrt( (rf^3) /muVal  );
-    timeFinalF = linspace(0, periodF, 50) ;
+    timeFinalF = linspace(0, periodF, 40) ;
     [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, options);
     tF = tF + t(end);
     
