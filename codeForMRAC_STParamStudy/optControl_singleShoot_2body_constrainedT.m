@@ -200,8 +200,8 @@ switch propulsionType
         % diagF_Inv = diag(1./F);
 
         F((log10(abs(F))< 0)) = 1;
-        diagF_Inv = diag(1./abs(F) ).^2;
-        % diagF_Inv = diag(1./abs(F) );
+        % diagF_Inv = diag(1./abs(F) ).^2;
+        diagF_Inv = diag(1./abs(F) );
 end
 %%  Use particleswarm to find lambda0 that makes the terminal state match xf
 
@@ -220,10 +220,10 @@ switch propulsionType
         lb = -1.0e-3*ones(nvars,1);
         ub =  1.0e-3*ones(nvars,1);
     case 'electric'
-        lb = -[1e-3*ones(nvars-1,1)', 0]';
-        ub =  [1e-3*ones(nvars-1,1)', pi/2]';
+        lb = -[1e-2*ones(nvars-1,1)', 0]';
+        ub =  [1e-2*ones(nvars-1,1)', pi/2]';
 end
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 300, 'MaxIterations', 200); %, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 200, 'MaxIterations', 300); %, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
@@ -284,6 +284,39 @@ for i = 1:length(t)
     u(i, :) = [u_dir, uSwitch];
 end
 
+switch propulsionType
+    case 'chemical'
+        z0 = [lambda0; x0];
+    case 'electric'
+
+        theta_f = 0;
+        % Semi-latus rectum
+        p = at*(1 - et^2);
+        
+        % Radius magnitude
+        r_mag = p / (1 + et*cos(theta_f));
+        
+        % Perifocal position
+        r_pf = r_mag * ...
+        [ cos(theta_f);
+        sin(theta_f);
+        0 ];
+
+        v_scale = sqrt(muVal / p);
+        
+        v_pf = v_scale * ...
+        [ -sin(theta_f);
+        et + cos(theta_f);
+        0 ];
+
+        periodF = 2*pi*sqrt( (at^3) /muVal  );
+end
+
+z0F = [lambda0(1:end-1); r_pf; v_pf; 1000];
+timeFinalF = linspace(0, periodF, 405) ;
+[tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-7*Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('AbsTol', 1e-8,'Stats','off'));
+xF = zF(:, (length(x0)+1):end); 
+
 %% Plot results: positions and control history
 figure;
 subplot(3, 1, 1)
@@ -320,6 +353,8 @@ plot(-rf, 0, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target');
 hTraj = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Trajectory');
 hSat = plot(x(1, 1), x(1, 2), 'k.', 'MarkerSize', 20, 'DisplayName', 'Satellite');
 
+plot(xF(:, 1), xF(:, 2), 'k-.', 'DisplayName', 'Target Orbit');
+
 % Calculate scaling for thrust vector visualization
 % We want the max thrust vector to correspond to roughly 15% of the plot span
 x_span = max(x(:,1)) - min(x(:,1));
@@ -340,7 +375,7 @@ if max_u == 0, scale_inv = 1; else, scale_inv = (0.15 * avg_span) / max_u; end
 hThrust = quiver(x(1, 1), x(1, 2), u_vec_plot(1, 1)*scale_inv, u_vec_plot(1, 2)*scale_inv, ...
     'r', 'LineWidth', 2, 'MaxHeadSize', 0.5, 'AutoScale', 'off', 'DisplayName', 'Thrust Direction');
 
-legend('show', 'Location', 'best');
+legend('show', 'Location', 'bestoutside');
 
 % Set axis limits with some padding
 x_min = min(x(:,1)); x_max = max(x(:,1));
@@ -372,17 +407,17 @@ for k = 1:frameStep:nSteps
     drawnow;
 
     viscircles([0 0],[r0 ],'LineStyle','--');
-    viscircles([0 0],[rf],'LineStyle','-.');
+    % viscircles([0 0],[rf],'LineStyle','-.');
     axis equal;
     % Capture frame for video
     frame = getframe(gcf);
     writeVideo(vWriter, frame);
 end
 
-addpoints(hTraj, x(end, 1), x(end, 2));
-set(hSat, 'XData', x(end, 1), 'YData', x(end, 2));
-set(hThrust, 'XData', x(end, 1), 'YData', x(end, 2), ...
-    'UData', u_vec_plot(end, 1)*scale_inv, 'VData', u_vec_plot(end, 2)*scale_inv);
+% addpoints(hTraj, x(end, 1), x(end, 2));
+% set(hSat, 'XData', x(end, 1), 'YData', x(end, 2));
+% set(hThrust, 'XData', x(end, 1), 'YData', x(end, 2), ...
+%     'UData', u_vec_plot(end, 1)*scale_inv, 'VData', u_vec_plot(end, 2)*scale_inv);
 drawnow;
 writeVideo(vWriter, getframe(gcf));
 

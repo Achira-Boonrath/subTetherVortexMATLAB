@@ -166,7 +166,7 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
         % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
     % z0 = [lambda0; x0];
     % chem prop
-    z0 = [1e-11*lambda0_guess; x0];
+    z0 = [1e-5*lambda0_guess; x0];
 
     % electric prop
     % z0 = [lambda0(1:end-1); x0];
@@ -174,7 +174,7 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     % options = odeset('RelTol', 1e-7,'AbsTol', 1e-7,'Stats','off');
     options = odeset('Stats','off');
     % Init orbit
-    z0Init = [1e-11*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
+    z0Init = [1e-5*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
     periodInit = 2*pi*sqrt( (r0^3) /muVal  );
     timeFinalInit = linspace(0, periodInit, 45);
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
@@ -185,7 +185,7 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     t = t + tInit(end);
 
     % F orbit
-    z0F = [1e-11*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
+    z0F = [1e-5*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
     periodF = 2*pi*sqrt( (rf^3) /muVal  );
     timeFinalF = linspace(0, periodF, 45) ;
     [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('AbsTol', 1e-7,'Stats','off'));
