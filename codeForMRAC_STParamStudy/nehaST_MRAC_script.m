@@ -86,11 +86,11 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             
             % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %$\hat{k}_r $
-            s0(35) = 37500; % range = linspace(37500*0.5 , 37500*1.5 , 5)
+            s0(35) = 56250; % range = linspace(37500*0.5 , 37500*1.5 , 5)
             %$\hat{\mathbf{K}}_z=[\hat{k}_{z,1}, \hat{k}_{z,2}]^T$
-            s0(36:37) = -1*[37500, 56250]; % range = linspace(37500*0.5 , 37500*1.5 , 5), % range = linspace(56250*0.5 , 56250*1.5 , 5)
+            s0(36:37) = -1*[56250, 84375]; % range = linspace(37500*0.5 , 37500*1.5 , 5), % range = linspace(56250*0.5 , 56250*1.5 , 5)
             %$\hat{{\boldsymbol{\Theta}}} =[\hat{{\boldsymbol{\Theta}}}_{1}, \hat{{\boldsymbol{\Theta}}}_{2}]^T$
-            s0(38:39) = -0.5*[30925, 14.78]; % range = 0.5*linspace(37500*0.5 , 37500*1.5 , 5), % range = linspace(14.78*0.5 , 14.78*1.5 , 5)
+            s0(38:39) = -0.5*[46387.5, 22.17]; % range = 0.5*linspace(30925*0.5 , 30925*1.5 , 5), % range = linspace(14.78*0.5 , 14.78*1.5 , 5)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             args.Gamma_x = [[5e+7 ,   0];       [  0 ,  5e+7]];
@@ -268,10 +268,29 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % fbControl, chaserM, dataMRAC, LiamSet, chaserI, debrisI, state_vec);
 
         %% Plotting 
+        % clear all;
+        % data =load('subTetherMRAC_v2.mat')
+        % dataforplot=data.state_vec
         runFuncForOpt = 0;
         if runFuncForOpt == 0
-            save(['subTetherMRAC_v',num2str((MRAC_v)),'.mat'])
+            save(sprintf('subTetherMRAC_v%d_kr%.0f.mat',MRAC_v,s0(35)), 'state_vec', 't_plot', 'elong_mt', 'FmagST')
 
+            filenames = {'subTetherMRAC_v2_kr18750.mat','subTetherMRAC_v2_kr28125.mat', 'subTetherMRAC_v2_kr37500.mat', 'subTetherMRAC_v2_kr46875.mat', 'subTetherMRAC_v2_kr56250.mat'};
+            % Initialize arrays
+            t_plot_all = cell(5, 1);
+            elong_mt_all = cell(5, 1);
+            state_vec_all = cell(5, 1);
+            FmagST_all = cell(5, 1);
+
+            % Load all the data 
+            for i = 1:5
+                data = load(filenames{i});
+                t_plot_all{i} = data.t_plot;
+                elong_mt_all{i} = data.elong_mt;
+                state_vec_all{i} = data.state_vec;
+                FmagST_all{i} = data.FmagST;
+
+            end
             % %fuel consumed %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % % thrustIntHist{count} = dataMRAC.MRACintStates(:,1)*(double(dataMRAC.g0) * double(dataMRAC.Isp));
             % % figure; plot(thrustMag)
@@ -302,18 +321,24 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % subplot(2, 1, 2)
             % Plot MT Elongation and Thrust Force %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             subplot(2, 1, 1)
-            plot(t_plot, elong_mt(1:tSkip:end)) 
-            hold on;
-            % yline(0.01)
-            plot(t_plot, state_vec(1:tSkip:end,33),"--")
+            for i = 1:5
+                plot(t_plot_all{i}, elong_mt_all{i}(1:tSkip:end)) 
+                hold on;
+                % yline(0.01)
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,33),"--")
+            end
             ylim([0 0.03])
-            legend("Actual","Desired")
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5","Desired")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("MT Elongation, m", 'fontsize', 13,'interpreter','latex')
             grid minor; 
             subplot(2, 1, 2)
-            plot(t_plot, FmagST(1:tSkip:end)) 
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, FmagST_all{i}(1:tSkip:end)); 
+            end
             ylim([0 900])
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("$|F_T|$ N", 'fontsize', 13,'interpreter','latex')
             grid minor; 
@@ -323,28 +348,48 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % Plot Adaptive Parameters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             figure; 
             subplot(3, 2, 1)
-            plot(t_plot, state_vec(1:tSkip:end,35))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,35))
+            end
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex'); 
             ylabel("$\hat{K}_r$, kg", 'fontsize', 13,'interpreter','latex')
             grid minor; 
             subplot(3, 2, 2)
-            plot(t_plot, state_vec(1:tSkip:end,36))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,36))
+            end
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s",'fontsize', 13,'interpreter','latex')
             ylabel("$\hat{K}_{z,1}$, N/m",'Interpreter','latex')
             grid minor
             subplot(3, 2, 3)
-            plot(t_plot, state_vec(1:tSkip:end,37))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,37))
+            end 
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s",'fontsize', 13,'interpreter','latex')
             ylabel("$\hat{K}_{z,2}$, Ns/m",'Interpreter','latex')
             grid minor
             subplot(3, 2, 4)
-            plot(t_plot, state_vec(1:tSkip:end,38))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,38))
+            end
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s",'fontsize', 13,'interpreter','latex')
             ylabel("$\hat{\Theta}_{1}$, N/m",'Interpreter','latex')
             grid minor
             subplot(3, 2, 5)
-            plot(t_plot, state_vec(1:tSkip:end,39))
+            hold on;
+            for i= 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,39))
+            end
             grid minor
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s",'fontsize', 13,'interpreter','latex')
             ylabel("$\hat{\Theta}_{2}$, Ns/m",'Interpreter','latex')
             % Save the figure
@@ -353,13 +398,21 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % Plot MT State Variables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             figure;
             subplot(2, 1, 1)
-            plot(t_plot, state_vec(1:tSkip:end,33))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,33))
+            end
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("$z_m$, m", 'fontsize', 13,'interpreter','latex')
             ylim([0 0.02])
             grid minor
             subplot(2, 1, 2)
-            plot(t_plot, state_vec(1:tSkip:end,34))
+            hold on;
+            for i = 1:5
+                plot(t_plot_all{i}, state_vec_all{i}(1:tSkip:end,34))
+            end
+            legend("Iteration 1","Iteration 2","Iteration 3","Iteration 4","Iteration 5")
             xlabel("Time, s",'fontsize', 13,'interpreter','latex')
             ylabel("$dz_m/dt$, m/s",'Interpreter','latex')
             grid minor
