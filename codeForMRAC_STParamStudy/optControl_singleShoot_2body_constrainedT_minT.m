@@ -31,9 +31,21 @@ propulsionType = 'electric'; % Options: 'chemical', 'electric'
 % Target orbital elements [sma, ecc, inc, ape, ran] (angles in degrees)
 %     oet = [42164.0, 0.001, 2.0, 0, 0, 0]
 % 
-% Unknowns corresponding to solution:
+% Unknowns corresponding to solution, min T:
 %     u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.04557325107502537, -0.055654206847527754, 0.9974094630699921, 5.166976235952729e-7, 0.8069069128203797, 9345.775854692882]
 %     lambda_0 = 1.1745500794600847e-7
+%
+% Unknowns corresponding to solution, min E:
+% tf = 11682.21981822656
+% lambda_0 = 0.504414962632399
+% u = [-0.00032088069738992316
+%  -0.0003785551362760347
+%   0.00505738958019216
+%  -2.075153067111718
+%  -2.123950091808782
+%  28.33270169497307
+%   1.1498524710626637e-5
+%   0.9774988736510167]
 
 %     NOTE: first 7 elements are the initial time costates, the 8th element is the insertion true anomaly, the 9th is the time-of-flight
 
@@ -61,24 +73,11 @@ switch propulsionType
     case 'electric'
         % electric prop
 
-        % Parameters
-        % at = 42164.0;             % semi-major axis [km]
-        % et = 0.001;                % eccentricity
-        % it = deg2rad(2.0);        % inclination
-        % Omega_t = deg2rad(0);   % RAAN
-        % omega_t = deg2rad(0);   % argument of periapsis
-        % theta_f = deg2rad(46);  % true anomaly
-
         x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         disp("initial radius")
         norm( [41797.671293047104, 5214.9122634261175, 184.49268401666282])
-        
-        % % Compute terminal state
-        % [xf, rf, vf] = StatesInECI( ...
-        % theta_f, at, et, it, Omega_t, omega_t, muVal);
-        % xf = [xf; 800];             % Desired terminal state at t = tf (Mass is free)
 
-        tf = 9345.775854692882*1.25;
+        tf = 11682.21981822656;%9345.775854692882*1.25;
         % 
         r0 = norm(x0(1:3));
         % rf = norm(xf(1:3));
@@ -220,10 +219,6 @@ switch propulsionType
         lb = -1.0e-3*ones(nvars,1);
         ub =  1.0e-3*ones(nvars,1);
     case 'electric'
-        % lb =  [0, 0, 0, -pi/2, -pi/2, 0, 0,... % costates D
-        %     0]'; % thetaf
-        % ub =  [pi/2, pi/2, pi/2, pi/2, pi/2, 2*pi, 2*pi,...% costates D
-        %     2*pi]';% thetaf
         lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
             0]'; % thetaf
         ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
@@ -239,10 +234,10 @@ switch propulsionType
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
     case 'electric'
-                % lambda0 = fsolve(@(lam0) objfun(lam0'), ...
-        % lambda0 = fsolve(@(lam0) shootingConstTFreeTheta(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t), ...
-            % lambda0 = fsolve(@(lam0) objfun(lam0'), ...
-            lambda0 = fsolve(@(lam0) shootingConstTFreeTheta(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t), ...
+            L0_guess = costate_from_D( lambda0_guess(1:end-1) );
+            lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
+
+            lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
 end
@@ -278,15 +273,7 @@ for i = 1:length(t)
     else
         u_dir = [0 0 0];
     end
-    
-    % Throttle (Switching function)
-    % rho = 1 - (Isp * g0 * L_v_norm)/(x_t(7)) - L_t(7);
-    % uSwitch = 0.5 - rho/(2*epsilon);
-    % if rho > epsilon
-    %     uSwitch = 0;
-    % elseif rho < - epsilon
-    %     uSwitch = 1;
-    % end
+
     [Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, L_v_norm, x_t, L_t, L0(1), epsilon, Tmax);
     
     u(i, :) = [u_dir, uSwitch];
@@ -450,6 +437,25 @@ function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, eps
     % zdot0 = hamiltonian_odeConstT(0, z0, muEarth, Tmax, Isp, g0, epsilon);
     % lambdaHat0 = [lambda0(1:end-1); - lambda0(1:end-1)'*zdot0(end-length(x0)+1:end)];
     % unitCostate = norm(lambdaHat0) -1;
+
+    [xf, rf, vf] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
+    [F1 , F2] = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, muVal);
+    cFinal = z(end,1:3)*F1 + z(end,4:6)*F2; 
+
+    x_tf = z(end,end-length(x0)+1:end).';
+
+    F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+        cFinal];  % terminal error
+
+end
+
+function F = shootingConstTFreeTheta_Trust(lambda0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0)
+
+    z0 = [lambda0(1:end-1); x0];
+    theta_f = lambda0(end);
+    options = odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off');
+
+    [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon, L0 ),[0 tf],z0, options);
 
     [xf, rf, vf] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
     [F1 , F2] = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, muVal);
