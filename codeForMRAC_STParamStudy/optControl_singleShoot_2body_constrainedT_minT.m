@@ -181,10 +181,10 @@ end
 
 g0=9.81;
 epsilon=1;
-ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, Tmax, Isp, g0, epsilon, uTest);
+ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
 
 %check 
-dsDiff = double( funcSubs( [x0;x0*0.1]) ) - ds;
+dsDiff = norm( double( funcSubs([x0*10.1;x0]) ) - ds )
 
 %% Solve two-point boundary value problem via shootingConstT
 % First try a single invocation of shootingConstT with the initial guess
@@ -197,11 +197,11 @@ switch propulsionType
         lambda0_guess = [lambda0_guess; pi/2];
         F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
 
-        % diagF_Inv = diag(1);
+        diagF_Inv = diag(1);
 
-        F((log10(abs(F))< 0)) = 1;
-        % diagF_Inv = diag(1./abs(F) ).^2;
-        diagF_Inv = diag(1./abs(F) );
+        % F((log10(abs(F))< 0)) = 1;
+        % % diagF_Inv = diag(1./abs(F) ).^2;
+        % diagF_Inv = diag(1./abs(F) );
 end
 %%  Use particleswarm to find lambda0 that makes the terminal state match xf
 
@@ -220,8 +220,14 @@ switch propulsionType
         lb = -1.0e-3*ones(nvars,1);
         ub =  1.0e-3*ones(nvars,1);
     case 'electric'
-        lb =  [0, 0, 0, -pi/2, -pi/2, 0, 0]';
-        ub =  [pi/2, pi/2, pi/2, pi/2, pi/2, 2*pi, 2*pi]';
+        % lb =  [0, 0, 0, -pi/2, -pi/2, 0, 0,... % costates D
+        %     0]'; % thetaf
+        % ub =  [pi/2, pi/2, pi/2, pi/2, pi/2, 2*pi, 2*pi,...% costates D
+        %     2*pi]';% thetaf
+        lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
+            0]'; % thetaf
+        ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
+            2*pi]';% thetaf
 end
 opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300); %, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
@@ -247,11 +253,12 @@ end
 switch propulsionType
     case 'chemical'
         z0 = [lambda0; x0];
+        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon ), [0 tf], z0);
     case 'electric'
-        z0 = [lambda0(1:end-1); x0];
+        L0= costate_from_D( lambda0(1:end-1) );
+        z0 = [L0(2:end); x0];
+        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0);
 end
-
-[t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), [0 tf], z0);
 
 % Extract state and costate trajectories from integrated z
 x = z(:, (length(x0)+1):end);               % states (columns correspond to [x y vx vy])
@@ -273,13 +280,14 @@ for i = 1:length(t)
     end
     
     % Throttle (Switching function)
-    rho = 1 - (Isp * g0 * L_v_norm)/(x_t(7)) - L_t(7);
-    uSwitch = 0.5 - rho/(2*epsilon);
-    if rho > epsilon
-        uSwitch = 0;
-    elseif rho < - epsilon
-        uSwitch = 1;
-    end
+    % rho = 1 - (Isp * g0 * L_v_norm)/(x_t(7)) - L_t(7);
+    % uSwitch = 0.5 - rho/(2*epsilon);
+    % if rho > epsilon
+    %     uSwitch = 0;
+    % elseif rho < - epsilon
+    %     uSwitch = 1;
+    % end
+    [Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, L_v_norm, x_t, L_t, L0(1), epsilon, Tmax);
     
     u(i, :) = [u_dir, uSwitch];
 end
@@ -312,9 +320,10 @@ switch propulsionType
         periodF = 2*pi*sqrt( (at^3) /muVal  );
 end
 
-z0F = [lambda0(1:end-1); r_pf; v_pf; 1000];
+L0= costate_from_D( lambda0(1:end-1) );
+z0F = [L0(2:end); r_pf; v_pf; 1000];
 timeFinalF = linspace(0, periodF, 405) ;
-[tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-7*Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('AbsTol', 1e-8,'Stats','off'));
+[tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-11*Tmax, Isp, g0, epsilon, L0(1)), timeFinalF, z0F, odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off'));
 xF = zF(:, (length(x0)+1):end); 
 
 %% Plot results: positions and control history
@@ -431,9 +440,10 @@ function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, eps
     L0= costate_from_D( lambda0(1:end-1) );
     % L0= ( lambda0(1:end-1) );
 
+    % norm( L0)
     z0 = [L0(2:end); x0];
     theta_f = lambda0(end);
-    options = odeset('RelTol', 1e-8,'AbsTol', 1e-8,'Stats','off');
+    options = odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off');
 
     [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon, L0(1)),[0 tf],z0, options);
     

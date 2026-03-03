@@ -11,17 +11,18 @@ elseif nargin > 8
     uSwitch = uFixed;
 end
 
-rho = 1 - (Isp * g0 * nLv^(1/2))/(x(7)*L0) - L(7)/L0;
+% rho = 1 - (Isp * g0 * nLv^(1/2))/(x(7)*L0) - L(7)/L0;
+% 
+% uSwitch = 0.5 - rho/(2*epsilon);
+% if rho > epsilon
+%     uSwitch = 0;
+% elseif rho < - epsilon
+%     uSwitch = 1;
+% end
+% 
+% Tmag = Tmax*uSwitch;
 
-uSwitch = 0.5 - rho/(2*epsilon);
-if rho > epsilon
-    uSwitch = 0;
-elseif rho < - epsilon
-    uSwitch = 1;
-end
-
-
-Tmag = Tmax*uSwitch;
+[Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, nLv^(1/2), x, L, L0, epsilon, Tmax);
 
 ds = zeros(length(s),1);
 ds(1) = -(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2);
@@ -34,15 +35,14 @@ ds(7) = -(Tmag*nLv^(1/2))/x(7)^(2);
 ds(8) = x(4);
 ds(9) = x(5);
 ds(10) =x(6);
-ds(11) =L(4)/nLv - L(4)*( Tmag /(x(7)*nLv^(1/2)) - (L(4)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(4)^3/nLv^(2)...
-    - (L(4)*L(5)^(2))/nLv^(2) - (L(4)*L(6)^(2))/nLv^(2) - (muEarth*x(1))/nPos^(3/2)...
-    - (L(4)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)*L(5)^(2)*Tmag)/(x(7)*nLv^(3/2)) + (L(4)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-ds(12) =L(5)/nLv - L(5)*( Tmag /(x(7)*nLv^(1/2)) - (L(5)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(5)^3/nLv^(2)...
-    - (L(4)^(2)*L(5))/nLv^(2) - (L(5)*L(6)^(2))/nLv^(2) - (muEarth*x(2))/nPos^(3/2)...
-    - (L(5)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(5)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)*L(6)^(2)*Tmag)/(x(7)*nLv^(3/2));
-ds(13) =L(6)/nLv - L(6)*( Tmag /(x(7)*nLv^(1/2)) - (L(6)^(2)*Tmag)/(x(7)*nLv^(3/2))) - L(6)^3/nLv^(2)...
-    - (L(4)^(2)*L(6))/nLv^(2) - (L(5)^(2)*L(6))/nLv^(2) - (muEarth*x(3))/nPos^(3/2)...
-    - (L(6)*Tmag)/(x(7)*nLv^(1/2)) + (L(4)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2)) + (L(5)^(2)*L(6)*Tmag)/(x(7)*nLv^(3/2));
+% ds(11) =-(L(4)^3*Tmag*nPos^(3/2) + muEarth*x(1)*x(7)*nLv^(3/2) + L(4)*L(5)^2*Tmag*nPos^(3/2)...
+%     + L(4)*L(6)^2*Tmag*nPos^(3/2))/(x(7)*nLv^(3/2)*nPos^(3/2));
+% ds(12) =-(L(5)^3*Tmag*nPos^(3/2) + muEarth*x(2)*x(7)*nLv^(3/2) + L(4)^2*L(5)*Tmag*nPos^(3/2)...
+%     + L(5)*L(6)^2*Tmag*nPos^(3/2))/(x(7)*nLv^(3/2)*nPos^(3/2));
+% ds(13) =-(L(6)^3*Tmag*nPos^(3/2) + muEarth*x(3)*x(7)*nLv^(3/2) + L(4)^2*L(6)*Tmag*nPos^(3/2)...
+%     + L(5)^2*L(6)*Tmag*nPos^(3/2))/(x(7)*nLv^(3/2)*nPos^(3/2));
+ds(11:13) = - (muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/nLv^(1/2) )*Tmag/x(7);
 ds(14) =-(Tmag*g0)/Isp;
+% abs(ds(11:13))  - abs(-(muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/nLv^(1/2) )*Tmag/x(7))
 
 end
