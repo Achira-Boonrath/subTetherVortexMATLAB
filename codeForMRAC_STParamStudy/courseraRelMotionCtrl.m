@@ -61,7 +61,7 @@ mu = 398600.4418;
 
 %p3, rel orbit w/o ctrl
 ChiefOE = [8500 , ...
-           1e-9, ...
+           0, ...
            deg2rad(53), ...
            deg2rad(55), ...
            deg2rad(40), ...
@@ -89,7 +89,7 @@ ChiefOE = [8500 , ...
 %              0, ...
 %              0] + ChiefOE;
 
-% p1
+% p3
 DeputyOE = [0, ...
              10/ChiefOE(1), ...
              0, ...
@@ -217,7 +217,7 @@ x_2 = s(7:end);
 % This creates a slightly advanced reference trajectory.
 
 % ecc = 0.1;
-trueAna = TrueAnomalyFromRV(x(1:3),x(4:6),muEarth);
+% trueAna = TrueAnomalyFromRV(x(1:3),x(4:6),muEarth);
 
 % % p1
 % [M,E] = True2MeanAnomaly(trueAna,ecc);
@@ -243,10 +243,11 @@ trueAna = TrueAnomalyFromRV(x(1:3),x(4:6),muEarth);
 
 rECI = 8510*(x(1:3)/norm(x(1:3)));
 vECI = x(4:6);
+% vECI = sqrt(muEarth/8510)*(x(4:6)/norm(x(4:6)));
 % ---------- Tracking Errors --------------------------------------------
 
 % Relative position error
-dr = x_2(1:3) - rECI
+dr = x_2(1:3) - rECI;
 % Relative velocity error
 drDot = x_2(4:6) - vECI;
 
@@ -300,7 +301,15 @@ ds_dd = scAcc([rECI; vECI]');
 K_1 = 0.00002;    % position gain
 K_2 = 0.005;      % velocity gain
 
+[rHill,vHill,DCM_ECI2Hill] = ...
+    ECI2CWHRelativeState( ...
+    x(1:3),x(4:6),...     % chief state
+    x_2(1:3),x_2(4:6),muEarth);  % deputy state
+
 ud = 0;%- K_1*( x(1:3) - 8510*(x(1:3)/norm(x(1:3))) );
+% ud =  - K_1*DCM_ECI2Hill'*  [0.5480,-2.1957, 0]';
+% ud =  - K_1*DCM_ECI2Hill'* [0.3405, -3.1924, 0]';
+% ud = - (K_2*eye(3)*drDot + K_1*eye(3)*dr);%- K_1*( x(1:3) - 8510*(x(1:3)/norm(x(1:3))) );
 
 u = -(ds(10:12) - ds_dd) ...
     - K_1*eye(3)*dr ...
