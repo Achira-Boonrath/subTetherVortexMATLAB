@@ -56,24 +56,24 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         
         if MRAC_v == 1
         % Initialize adaptive states for the ODE solver - MRAC-1
-            % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             s0(33) = (l_mt - l0vec(1)); 
             s0(34) = 0.0; 
+            
+            % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % ${\hat{h}}$ 
-            s0(35) = chaserM;
+            s0(35) = chaserM;  % range = linspace( chaserM*0.25 , chaserM*2 , 5)
             % $\hat{\mathbf{a}}=[{\hat{a}}_1, {\hat{a}}_2]^T$
-            s0(36) = 1.0 * Kvec(1);
-            s0(37) = 1.0 * cVec(1);
+            s0(36) = Kvec(1);  % range = linspace( Kvec(1)*0.25 , Kvec(1)*2 , 5)
+            s0(37) = cVec(1);  % range = linspace( cVec(1)*0.25 , cVec(1)*2 , 5)
+            args.L0 = 15*0.9; % range = linspace( 13.5*0.25 , 13.5*2 , 5)
+            args.kA = 1*chaserM*3.8*(1.1); % range = linspace( 6688*0.25 , 6688*2 , 5)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            s0(38:39) = [0, 0];
 
-            % Good 1
-            args.L0 = 15*0.9;
-            args.kA = 1*chaserM*3.8*(1.1);
+            s0(38:39) = [0, 0];
             args.gamma = 30;
-            args.sigmaMRAC_h  = 0.05; %1.0e+03; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
-            args.sigmaMRAC_a1 = 0.0005; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
-            args.sigmaMRAC_a2 = 0.05; %0.25 * 0.01 *3*4.0*(args.L0/15.0);
+            args.sigmaMRAC_h  = 0.05; 
+            args.sigmaMRAC_a1 = 0.0005; 
+            args.sigmaMRAC_a2 = 0.05; 
 
             args.sigmaMRAC_h  = (args.gamma/30)*0.05; 
             args.sigmaMRAC_a1 = (args.gamma/30)*0.0005; 
