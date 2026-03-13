@@ -38,7 +38,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
         fbControl = 'MRAC';
-        MRAC_v = 2; % Version of MRAC being used
+        MRAC_v = 1; % Version of MRAC being used
         
         % Set thrust magnitude from MRAC parameters
         FT_const = dataMRAC.MRACparams(8);
@@ -58,7 +58,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Initialize adaptive states for the ODE solver - MRAC-1
             s0(33) = (l_mt - l0vec(1)); 
             s0(34) = 0.0; 
-            
+
             % MODIFY THESE INITIAL GUESS VALUES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % ${\hat{h}}$ 
             s0(35) = chaserM;  % range = linspace( chaserM*0.25 , chaserM*2 , 5)
