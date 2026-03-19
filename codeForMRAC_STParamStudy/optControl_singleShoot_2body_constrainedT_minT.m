@@ -38,14 +38,14 @@ propulsionType = 'electric'; % Options: 'chemical', 'electric'
 % Unknowns corresponding to solution, min E:
 % tf = 11682.21981822656
 % lambda_0 = 0.504414962632399
-% u = [-0.00032088069738992316
-%  -0.0003785551362760347
-%   0.00505738958019216
-%  -2.075153067111718
-%  -2.123950091808782
-%  28.33270169497307
-%   1.1498524710626637e-5
-%   0.9774988736510167]
+u0 = [-0.00032088069738992316
+ -0.0003785551362760347
+  0.00505738958019216
+ -2.075153067111718
+ -2.123950091808782
+ 28.33270169497307
+  1.1498524710626637e-5
+  0.9774988736510167];
 
 %     NOTE: first 7 elements are the initial time costates, the 8th element is the insertion true anomaly, the 9th is the time-of-flight
 
@@ -63,19 +63,21 @@ switch propulsionType
         period = 2*pi*sqrt( (aTrans^3) /muVal  );
         tf = period*0.5;                % Final time (seconds)
         
+        % x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+        % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
+
         x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
-        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
+        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 0.8]';             % Desired terminal state at t = tf (Mass is free)
 
         lambda0_guess = 1e-5*ones(length(x0),1);
-
-%% Problem data
 
     case 'electric'
         % electric prop
 
+        % x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         disp("initial radius")
-        norm( [41797.671293047104, 5214.9122634261175, 184.49268401666282])
+        norm( x0(1:3) )
 
         tf = 11682.21981822656;%9345.775854692882*1.25;
         % 
@@ -209,7 +211,8 @@ switch propulsionType
         objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
     case 'electric'
         % objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
-        objfun = @(lam0) shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)' * diagF_Inv * shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        objfun = @(lam0) shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)' ...
+            * diagF_Inv * shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
 end
 
 nvars = length(lambda0_guess);
@@ -227,6 +230,7 @@ end
 opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300); %, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
+% lambda0_guess = u0*(1e-6);
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
 switch propulsionType
     case 'chemical'
@@ -237,6 +241,7 @@ switch propulsionType
             L0_guess = costate_from_D( lambda0_guess(1:end-1) );
             lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
 
+            % L0_guess(1) = 0.504414962632399;
             lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
@@ -444,8 +449,19 @@ function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, eps
 
     x_tf = z(end,end-length(x0)+1:end).';
 
+  %   xf=   1.0e+04 *[
+  %  2.356061101516984
+  %  3.491738667098542
+  %  0.121934201119171
+  % -0.000254921198114
+  %  0.000172106617357
+  %  0.000006010095513];
+
     F = [x_tf(1:end-1) - xf; z(end,length(x0));...
         cFinal];  % terminal error
+
+    % F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    %     theta_f - 0.9774988736510167];  % terminal error
 
 end
 
@@ -463,8 +479,19 @@ function F = shootingConstTFreeTheta_Trust(lambda0, x0, tf, muEarth, Tmax, Isp, 
 
     x_tf = z(end,end-length(x0)+1:end).';
 
+  %  xf=   1.0e+04 *[
+  %  2.356061101516984
+  %  3.491738667098542
+  %  0.121934201119171
+  % -0.000254921198114
+  %  0.000172106617357
+  %  0.000006010095513];
+
     F = [x_tf(1:end-1) - xf; z(end,length(x0));...
         cFinal];  % terminal error
+
+    % F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    %     theta_f - 0.9774988736510167];  % terminal error
 
 end
 
