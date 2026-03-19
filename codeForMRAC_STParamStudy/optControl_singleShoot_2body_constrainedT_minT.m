@@ -228,9 +228,9 @@ switch propulsionType
             2*pi]';% thetaf
 end
 opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300); %, "UseParallel", true);
-lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
-lambda0_guess = lambda0_guess';
-% lambda0_guess = u0*(1e-6);
+% lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
+% lambda0_guess = lambda0_guess';
+% lambda0_guess = u0;
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
 switch propulsionType
     case 'chemical'
@@ -238,10 +238,12 @@ switch propulsionType
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
     case 'electric'
-            L0_guess = costate_from_D( lambda0_guess(1:end-1) );
-            lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
+            % L0_guess = costate_from_D( lambda0_guess(1:end-1) );
+            % lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
 
-            % L0_guess(1) = 0.504414962632399;
+            lambda0_guess = u0;
+            L0_guess(1) = 0.504414962632399;
+            
             lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
