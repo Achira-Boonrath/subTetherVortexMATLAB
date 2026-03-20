@@ -66,9 +66,6 @@ switch propulsionType
         % x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
 
-        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
-        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 0.8]';             % Desired terminal state at t = tf (Mass is free)
-
         lambda0_guess = 1e-5*ones(length(x0),1);
 
     case 'electric'
@@ -144,11 +141,11 @@ switch propulsionType
         eqns = subs( (eqns), Isp, 230);
     case 'electric'
         % electric prop
-        eqns = subs( (eqns), Tmax, 0.1);
+        eqns = subs( (eqns), Tmax, 0.1*1e-3);
         eqns = subs( (eqns), Isp, 3000);
 end
 
-eqns = subs( (eqns), g0, 9.81);
+eqns = subs( (eqns), g0, 9.81*1e-3);
 eqns = subs( (eqns), U(end), uTest);
 % eqns = subs( (eqns), mC, 1000);
 
@@ -168,7 +165,7 @@ switch propulsionType
         Tmax=425*4;
         Isp=230; 
     case 'electric'
-        Tmax=0.1;
+        Tmax=0.1*1e-3; %in kN
         Isp=3000;
         
         % Additional parameters for electric prop
@@ -180,7 +177,7 @@ switch propulsionType
         omega_t = deg2rad(0);   % argument of periapsis
 end 
 
-g0=9.81;
+g0=9.81*1e-3; %in km/s^2
 epsilon=1;
 ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
 
@@ -228,9 +225,8 @@ switch propulsionType
             2*pi]';% thetaf
 end
 opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300); %, "UseParallel", true);
-% lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
-% lambda0_guess = lambda0_guess';
-% lambda0_guess = u0;
+lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
+lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
 switch propulsionType
     case 'chemical'
@@ -238,11 +234,11 @@ switch propulsionType
             lambda0_guess, ...
             optimoptions('fsolve', 'Display', 'iter'));
     case 'electric'
-            % L0_guess = costate_from_D( lambda0_guess(1:end-1) );
-            % lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
+            L0_guess = costate_from_D( lambda0_guess(1:end-1) );
+            lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
 
-            lambda0_guess = u0;
-            L0_guess(1) = 0.504414962632399;
+            % lambda0_guess = u0;
+            % L0_guess(1) = 0.504414962632399;
             
             lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
             lambda0_guess, ...
