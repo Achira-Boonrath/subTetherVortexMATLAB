@@ -71,85 +71,18 @@ switch propulsionType
     case 'electric'
         % electric prop
 
-        % x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         disp("initial radius")
         norm( x0(1:3) )
 
         tf = 11682.21981822656;%9345.775854692882*1.25;
-        % 
         r0 = norm(x0(1:3));
-        % rf = norm(xf(1:3));
-        % % Initial guess for costates (at t=0). fsolve will update this.
-        % % lambda0_guess = [0; 0; 0; 0; 0; 0; 0];
 
         lambda0_guess = 1e-5*ones(length(x0),1);
 end
-
-%% Define symbolic variables for deriving equations
-
-% State symbols (position and velocity)
-syms x y z vx vy vz n muEarth ...
-    ax ay az u mC Tmax Isp g0 real
-
-% Build state and control symbolic vectors for clarity
-X = [x; y; z; vx; vy; vz; mC];            % symbolic state vector (4x1)
-Xnum = sym('x', [length(x0) 1],'real');
-U = [ax; ay; az; u];
-
-% Define the dynamics f = dX/dt (Two-Body Keplerian dynamics with variable mass)
-f = [vx; ...
-    vy; ...
-    vz; ...
-    -x*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ax*(Tmax/mC)*u; ...
-    -y*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ay*(Tmax/mC)*u; ...
-    -z*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + az*(Tmax/mC)*u; ...
-    -(Tmax/Isp*g0)*u; ...
-    ];
-% Symbolic costate vector (7x1)
-Lvec = sym('L', [length(x0) 1],'real');
-
-%% Build symbolic ODEs for states and costates using helper
-optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
-             - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-             - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-             U(end)];
-
-V = 0.5*U(end)'*U(end); % the instantaneous cost on the control (scalar).
-% The function odeDynAndLag should return symbolic expressions for xdot and Ldot
-[star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);
-
-% Compose the equations array:
-% - First the costate dynamics (Ldot)
-% - Then the state dynamics (xdot)
-% This ordering matches how we will stack z = [lambda; x] for integration.
-eqns = [
-    (star_Ldot).',         % costate ODEs (row)
-    (star_xdot).'          % state ODEs (row)
-    ];
-eqns = simplify(eqns);
-
-% Substitute the numeric value for mean motion to simplify expressions
 uTest = 1;
-eqns = subs( (eqns), muEarth, muVal);
+[eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, 'electric',uTest);
 
-% Symbolic substitution based on propulsion type
-switch propulsionType
-    case 'chemical'
-        % chem prop
-        eqns = subs( (eqns), Tmax, 425*4);
-        eqns = subs( (eqns), Isp, 230);
-    case 'electric'
-        % electric prop
-        eqns = subs( (eqns), Tmax, 0.1*1e-3);
-        eqns = subs( (eqns), Isp, 3000);
-end
-
-eqns = subs( (eqns), g0, 9.81*1e-3);
-eqns = subs( (eqns), U(end), uTest);
-% eqns = subs( (eqns), mC, 1000);
-
-eqns = simplify(eqns);
 %% Build a function handle that substitutes numeric z = [lambda; x] into the
 % symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
 funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)] );
@@ -428,38 +361,20 @@ end
 function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)
 
     L0= costate_from_D( lambda0(1:end-1) );
-    % L0= ( lambda0(1:end-1) );
 
-    % norm( L0)
-    z0 = [L0(2:end); x0];
-    theta_f = lambda0(end);
-    options = odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off');
-
-    [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon, L0(1)),[0 tf],z0, options);
-    
     % zdot0 = hamiltonian_odeConstT(0, z0, muEarth, Tmax, Isp, g0, epsilon);
     % lambdaHat0 = [lambda0(1:end-1); - lambda0(1:end-1)'*zdot0(end-length(x0)+1:end)];
     % unitCostate = norm(lambdaHat0) -1;
 
-    [xf, rf, vf] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
-    [F1 , F2] = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, muVal);
-    cFinal = z(end,1:3)*F1 + z(end,4:6)*F2; 
+    z0 = [L0(2:end); x0];
+    theta_f = lambda0(end);
 
-    x_tf = z(end,end-length(x0)+1:end).';
-
-  %   xf=   1.0e+04 *[
-  %  2.356061101516984
-  %  3.491738667098542
-  %  0.121934201119171
-  % -0.000254921198114
-  %  0.000172106617357
-  %  0.000006010095513];
+    % Call helper to integrate and compute terminal constraints
+    [z, xf, x_tf, cFinal]= integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+        at, et, it, Omega_t, omega_t, muVal);
 
     F = [x_tf(1:end-1) - xf; z(end,length(x0));...
         cFinal];  % terminal error
-
-    % F = [x_tf(1:end-1) - xf; z(end,length(x0));...
-    %     theta_f - 0.9774988736510167];  % terminal error
 
 end
 
@@ -467,42 +382,12 @@ function F = shootingConstTFreeTheta_Trust(lambda0, x0, tf, muEarth, Tmax, Isp, 
 
     z0 = [lambda0(1:end-1); x0];
     theta_f = lambda0(end);
-    options = odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off');
 
-    [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon, L0 ),[0 tf],z0, options);
-
-    [xf, rf, vf] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
-    [F1 , F2] = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, muVal);
-    cFinal = z(end,1:3)*F1 + z(end,4:6)*F2; 
-
-    x_tf = z(end,end-length(x0)+1:end).';
-
-  %  xf=   1.0e+04 *[
-  %  2.356061101516984
-  %  3.491738667098542
-  %  0.121934201119171
-  % -0.000254921198114
-  %  0.000172106617357
-  %  0.000006010095513];
+    % Call helper to integrate and compute terminal constraints
+    [z, xf, x_tf, cFinal] = integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+        at, et, it, Omega_t, omega_t, muVal);
 
     F = [x_tf(1:end-1) - xf; z(end,length(x0));...
         cFinal];  % terminal error
 
-    % F = [x_tf(1:end-1) - xf; z(end,length(x0));...
-    %     theta_f - 0.9774988736510167];  % terminal error
-
-end
-
-function [F1 , F2] = dxf_dtheta(theta_f, at, et, it, Omega_t, omega_t, mu)
-% from transCondFreeXf.m
-
-F1 = [(at*(et^2 - 1)*(et*cos(Omega_t)*sin(omega_t) + cos(Omega_t)*cos(omega_t)*sin(theta_f) + et*sin(Omega_t)*cos(it)*cos(omega_t) - sin(Omega_t)*cos(it)*sin(omega_t)*sin(theta_f)) + at*cos(theta_f)*(cos(Omega_t)*sin(omega_t) + sin(Omega_t)*cos(it)*cos(omega_t))*(et^2 - 1))/(et*cos(theta_f) + 1)^2;...
-(at*(et^2 - 1)*(et*sin(Omega_t)*sin(omega_t) + sin(Omega_t)*cos(omega_t)*sin(theta_f) - et*cos(Omega_t)*cos(it)*cos(omega_t) + cos(Omega_t)*cos(it)*sin(omega_t)*sin(theta_f)) + at*cos(theta_f)*(sin(Omega_t)*sin(omega_t) - cos(Omega_t)*cos(it)*cos(omega_t))*(et^2 - 1))/(et*cos(theta_f) + 1)^2;...
-    -(at*sin(it)*(et^2 - 1)*(cos(omega_t + theta_f) + et*cos(omega_t)))/(et*cos(theta_f) + 1)^2];
-
-F2 = [((mu/at)^(1/2)*(cos(Omega_t)*sin(omega_t)*sin(theta_f) - cos(Omega_t)*cos(omega_t)*cos(theta_f) + sin(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f) + sin(Omega_t)*cos(it)*cos(theta_f)*sin(omega_t)))/(1 - et^2)^(1/2);...
-    -((mu/at)^(1/2)*(sin(Omega_t)*cos(omega_t)*cos(theta_f) - sin(Omega_t)*sin(omega_t)*sin(theta_f) + cos(Omega_t)*cos(it)*cos(omega_t)*sin(theta_f) + cos(Omega_t)*cos(it)*cos(theta_f)*sin(omega_t)))/(1 - et^2)^(1/2);...
-    -(sin(omega_t + theta_f)*sin(it)*(mu/at)^(1/2))/(1 - et^2)^(1/2)];
-
-% F= F1 + F2;
 end
