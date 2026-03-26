@@ -12,8 +12,6 @@ end
 
 [Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, (nLv^(1/2)), x, L, L0, epsilon, Tmax);
 
-% L(4:6) = L(4:6)/(1e+6);              % costates (columns correspond to [L...]) 
-
 ds = zeros(length(s),1);
 ds(1) = (-(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2) )/(1);
 ds(2) = (-(muEarth*(- L(5)*x(1)^(2) + 3*L(4)*x(1)*x(2) + 2*L(5)*x(2)^(2) + 3*L(6)*x(2)*x(3) - L(5)*x(3)^(2)))/nPos^(5/2) )/(1);

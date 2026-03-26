@@ -1,4 +1,4 @@
-function [eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, propulsionType, uTest)
+function [eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, propulsionType, uTest, minT)
 % buildHamiltonianEquations Construct symbolic Hamiltonian ODE expressions
 %   eqns = buildHamiltonianEquations(x0, muVal, propulsionType)
 %   Returns a symbolic row vector of equations [Ldot'; xdot'] with numeric
@@ -13,15 +13,23 @@ function [eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, propulsionTyp
 %     eqns - symbolic row vector containing the costate ODEs followed by
 %            state ODEs, ready for numeric substitution.
 
+if nargin < 5
+    minT = 0;
+end
+
 % State symbols (position and velocity)
-syms x y z vx vy vz n muEarth ...
+syms x y z vx vy vz muEarth ...
     ax ay az u mC Tmax Isp g0 real
 
 % Build state and control symbolic vectors for clarity
 X = [x; y; z; vx; vy; vz; mC];            % symbolic state vector
 Xnum = sym('x', [length(x0) 1],'real');
-U = [ax; ay; az; u];
-
+if minT == 0
+    U = [ax; ay; az; u];
+else
+    u = 1;
+    U = [ax; ay; az];
+end
 % Define the dynamics f = dX/dt (Two-Body Keplerian dynamics with variable mass)
 f = [vx; ...
     vy; ...
@@ -36,13 +44,20 @@ f = [vx; ...
 Lvec = sym('L', [length(x0) 1],'real');
 
 % Optimal control direction (unit vector opposite costates of velocity)
-optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
-             - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-             - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-             U(end)];
-
-% Instantaneous control cost (here a simple throttle penalization)
-V = 0.5*U(end)'*U(end);
+if minT == 0
+    optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+        - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+        - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+        U(end)];
+    % Instantaneous control cost (here a simple throttle penalization)
+    V = 0.5*U(end)'*U(end);
+else
+    optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+        - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
+        - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2)];
+    % Instantaneous control cost (here a simple throttle penalization)
+    V = 1;
+end
 
 % Delegate symbolic derivation of xdot and Ldot to helper (expected on path)
 [star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);

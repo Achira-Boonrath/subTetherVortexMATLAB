@@ -18,55 +18,61 @@ function optControl_singleShoot_2body
 close all; clear all; clc
 % propulsionType = 'chemical'; % Options: 'chemical', 'electric'
 propulsionType = 'electric'; % Options: 'chemical', 'electric'
-%% 
+%%
 
 % System Parameters:
 %     Tmax = 0.1 N
 %     Isp = 3000 s
-%     mu = 398600.4418 km3/s2 
+%     mu = 398600.4418 km3/s2
 %     m0 = 1000 kg
-% 
+%
 % Initial state (cartesian)
 %     x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225]
 % Target orbital elements [sma, ecc, inc, ape, ran] (angles in degrees)
 %     oet = [42164.0, 0.001, 2.0, 0, 0, 0]
-% 
-% Unknowns corresponding to solution, min T:
-%     u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.04557325107502537, -0.055654206847527754, 0.9974094630699921, 5.166976235952729e-7, 0.8069069128203797, 9345.775854692882]
-%     lambda_0 = 1.1745500794600847e-7
 %
+% Unknowns corresponding to solution, min T:
+u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.04557325107502537, -0.055654206847527754, 0.9974094630699921, 5.166976235952729e-7, 0.8069069128203797, 9345.775854692882]
+% lambda_0 = 1.1745500794600847e-7
+% test call: shootingConstTFreeTheta_Trust_minT(u0', x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, 1.1745500794600847e-7)
+
 % Unknowns corresponding to solution, min E:
 % tf = 11682.21981822656
 % lambda_0 = 0.504414962632399
-u0 = [-0.00032088069738992316
- -0.0003785551362760347
-  0.00505738958019216
- -2.075153067111718
- -2.123950091808782
- 28.33270169497307
-  1.1498524710626637e-5
-  0.9774988736510167];
+% u0 = [-0.00032088069738992316
+%  -0.0003785551362760347
+%   0.00505738958019216
+%  -2.075153067111718
+%  -2.123950091808782
+%  28.33270169497307
+%   1.1498524710626637e-5
+%   0.9774988736510167];
 
 %     NOTE: first 7 elements are the initial time costates, the 8th element is the insertion true anomaly, the 9th is the time-of-flight
 
 %% Problem data
 
 % Symbolic substitution based on propulsion type
-muVal = 398600.4418;     % Earth 
+muVal = 398600.4418;     % Earth
+uTest = 1;
+minT = 1;
 switch propulsionType
     case 'chemical'
         % chem prop
-        
+
         r0 = 780+6378;
         rf = 9770+6378;
         aTrans = (r0 + rf)/2;
         period = 2*pi*sqrt( (aTrans^3) /muVal  );
         tf = period*0.5;                % Final time (seconds)
-        
+
         % x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
 
         lambda0_guess = 1e-5*ones(length(x0),1);
+
+        lb = -1.0e-3*ones(nvars,1);
+        ub =  1.0e-3*ones(nvars,1);
 
     case 'electric'
         % electric prop
@@ -78,10 +84,22 @@ switch propulsionType
         tf = 11682.21981822656;%9345.775854692882*1.25;
         r0 = norm(x0(1:3));
 
-        lambda0_guess = 1e-5*ones(length(x0),1);
+        % if minT ==0
+        lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
+            0]'; % thetaf
+        ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
+            2*pi]';% thetaf
+        % else
+        %     lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
+        %         0,    -1]'; % thetaf
+        %     ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
+        %         2*pi, 1]';% thetaf
+        % end
+
+        lambda0_guess = lb;
 end
-uTest = 1;
-[eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, 'electric',uTest);
+
+[eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, 'electric',uTest, minT);
 
 %% Build a function handle that substitutes numeric z = [lambda; x] into the
 % symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
@@ -96,11 +114,11 @@ muEarth=muVal;
 switch propulsionType
     case 'chemical'
         Tmax=425*4;
-        Isp=230; 
+        Isp=230;
     case 'electric'
         Tmax=0.1*1e-3; %in kN
         Isp=3000;
-        
+
         % Additional parameters for electric prop
         at = 42164.0;             % semi-major axis [km]
         rf = at;
@@ -108,13 +126,13 @@ switch propulsionType
         it = deg2rad(2.0);        % inclination
         Omega_t = deg2rad(0);   % RAAN
         omega_t = deg2rad(0);   % argument of periapsis
-end 
+end
 
 g0=9.81*1e-3; %in km/s^2
 epsilon=1;
 ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
 
-%check 
+%check
 dsDiff = norm( double( funcSubs([x0*10.1;x0]) ) - ds )
 
 %% Solve two-point boundary value problem via shootingConstT
@@ -125,9 +143,11 @@ switch propulsionType
         F = shootingConstT(lambda0_guess, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
     case 'electric'
         % Update lambda0_guess for electric case (adds theta_f)
-        lambda0_guess = [lambda0_guess; pi/2];
-        F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
-
+        if minT ==0
+            F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        else
+            F = shootingConstTFreeTheta_minT(lambda0_guess,x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        end
         diagF_Inv = diag(1);
 
         % F((log10(abs(F))< 0)) = 1;
@@ -141,23 +161,18 @@ switch propulsionType
         objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
     case 'electric'
         % objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
-        objfun = @(lam0) shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)' ...
-            * diagF_Inv * shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        if minT ==0
+            objfun = @(lam0) shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)' ...
+                * diagF_Inv * shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        else
+            objfun = @(lam0) shootingConstTFreeTheta_minT(lam0', x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)' ...
+                * diagF_Inv * shootingConstTFreeTheta_minT(lam0', x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
+        end
 end
 
 nvars = length(lambda0_guess);
 
-switch propulsionType
-    case 'chemical'
-        lb = -1.0e-3*ones(nvars,1);
-        ub =  1.0e-3*ones(nvars,1);
-    case 'electric'
-        lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
-            0]'; % thetaf
-        ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
-            2*pi]';% thetaf
-end
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300); %, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 300, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
@@ -165,19 +180,35 @@ switch propulsionType
     case 'chemical'
         lambda0 = fsolve(@(lam0) shootingConstT(lam0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon), ...
             lambda0_guess, ...
-            optimoptions('fsolve', 'Display', 'iter'));
+            optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 2000));
     case 'electric'
+        if minT == 0
             L0_guess = costate_from_D( lambda0_guess(1:end-1) );
             lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
 
-            % lambda0_guess = u0;
-            % L0_guess(1) = 0.504414962632399;
-            
             lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust(lam0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
-            lambda0_guess, ...
-            optimoptions('fsolve', 'Display', 'iter'));
-end
+                lambda0_guess, ...
+                optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 3000));
+        else
+            % L0_guess = costate_from_D( lambda0_guess(1:end-2) );
+            % lambda0_guess = [L0_guess(2:end); lambda0_guess(end-1:end)] ;
 
+            % lambda0_guess = u0';
+            % L0_guess(1) = 1.1745500794600847e-7;
+
+            L0_guess= costate_from_D( lambda0_guess(1:end-1) );
+            % Call helper to integrate and compute terminal constraints
+            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], 1e+6, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
+                at, et, it, Omega_t, omega_t, muVal);
+
+            lambda0_guess = [L0_guess(2:end); lambda0_guess(end); tDone ];
+
+            lambda0 = fsolve(@(lam0) shootingConstTFreeTheta_Trust_minT(lam0, x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0_guess(1)), ...
+                lambda0_guess, ...
+                optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 2000));
+        end
+end
+lambda0-u0'
 %% Integrate the Hamiltonian system with the solved initial costates
 % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
 % z0 = [lambda0; x0];
@@ -186,9 +217,18 @@ switch propulsionType
         z0 = [lambda0; x0];
         [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon ), [0 tf], z0);
     case 'electric'
-        L0= costate_from_D( lambda0(1:end-1) );
-        z0 = [L0(2:end); x0];
-        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0);
+
+        if minT ==0
+            L0= costate_from_D( lambda0(1:end-1) );
+            z0 = [L0(2:end); x0];
+            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0);
+        else
+            lambda0 = lambda0(1:end-1);
+            L0= costate_from_D( lambda0(1:end-1) );
+            z0 = [L0(2:end); x0];
+
+            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0);
+        end
 end
 
 % Extract state and costate trajectories from integrated z
@@ -201,7 +241,7 @@ epsilon = 1;
 for i = 1:length(t)
     L_t = lambda(i, :)';
     x_t = x(i, :)';
-    
+
     % Direction (from optUSet structure: -L_v / norm(L_v))
     L_v_norm = sqrt(L_t(4)^2 + L_t(5)^2 + L_t(6)^2);
     if L_v_norm ~= 0
@@ -211,7 +251,7 @@ for i = 1:length(t)
     end
 
     [Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, L_v_norm, x_t, L_t, L0(1), epsilon, Tmax);
-    
+
     u(i, :) = [u_dir, uSwitch];
 end
 
@@ -223,22 +263,22 @@ switch propulsionType
         theta_f = 0;
         % Semi-latus rectum
         p = at*(1 - et^2);
-        
+
         % Radius magnitude
         r_mag = p / (1 + et*cos(theta_f));
-        
+
         % Perifocal position
         r_pf = r_mag * ...
-        [ cos(theta_f);
-        sin(theta_f);
-        0 ];
+            [ cos(theta_f);
+            sin(theta_f);
+            0 ];
 
         v_scale = sqrt(muVal / p);
-        
+
         v_pf = v_scale * ...
-        [ -sin(theta_f);
-        et + cos(theta_f);
-        0 ];
+            [ -sin(theta_f);
+            et + cos(theta_f);
+            0 ];
 
         periodF = 2*pi*sqrt( (at^3) /muVal  );
 end
@@ -247,7 +287,7 @@ L0= costate_from_D( lambda0(1:end-1) );
 z0F = [L0(2:end); r_pf; v_pf; 1000];
 timeFinalF = linspace(0, periodF, 405) ;
 [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-11*Tmax, Isp, g0, epsilon, L0(1)), timeFinalF, z0F, odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off'));
-xF = zF(:, (length(x0)+1):end); 
+xF = zF(:, (length(x0)+1):end);
 
 %% Plot results: positions and control history
 figure;
@@ -360,34 +400,73 @@ end
 
 function F = shootingConstTFreeTheta(lambda0,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)
 
-    L0= costate_from_D( lambda0(1:end-1) );
+L0= costate_from_D( lambda0(1:end-1) );
 
-    % zdot0 = hamiltonian_odeConstT(0, z0, muEarth, Tmax, Isp, g0, epsilon);
-    % lambdaHat0 = [lambda0(1:end-1); - lambda0(1:end-1)'*zdot0(end-length(x0)+1:end)];
-    % unitCostate = norm(lambdaHat0) -1;
+z0 = [L0(2:end); x0];
+theta_f = lambda0(end);
 
-    z0 = [L0(2:end); x0];
-    theta_f = lambda0(end);
+% Call helper to integrate and compute terminal constraints
+[z, xf, x_tf, cFinal]= integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+    at, et, it, Omega_t, omega_t, muVal);
 
-    % Call helper to integrate and compute terminal constraints
-    [z, xf, x_tf, cFinal]= integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
-        at, et, it, Omega_t, omega_t, muVal);
+%compute hamiltonian
 
-    F = [x_tf(1:end-1) - xf; z(end,length(x0));...
-        cFinal];  % terminal error
+F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    cFinal];  % terminal error
 
 end
 
 function F = shootingConstTFreeTheta_Trust(lambda0, x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0)
 
-    z0 = [lambda0(1:end-1); x0];
-    theta_f = lambda0(end);
+z0 = [lambda0(1:end-1); x0];
+theta_f = lambda0(end);
 
-    % Call helper to integrate and compute terminal constraints
-    [z, xf, x_tf, cFinal] = integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
-        at, et, it, Omega_t, omega_t, muVal);
+% Call helper to integrate and compute terminal constraints
+[z, xf, x_tf, cFinal] = integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+    at, et, it, Omega_t, omega_t, muVal);
 
-    F = [x_tf(1:end-1) - xf; z(end,length(x0));...
-        cFinal];  % terminal error
+F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    cFinal];  % terminal error
+
+end
+
+function F = shootingConstTFreeTheta_minT(lambda0Aug,x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t)
+
+% lambda0 = lambda0Aug(1:end-1);
+% tf = 10000*(10^(lambda0Aug(end)));
+
+lambda0 = lambda0Aug;
+tf = 1e+6;
+L0= costate_from_D( lambda0(1:end-1) );
+
+z0 = [L0(2:end); x0];
+theta_f = lambda0(end);
+
+% Call helper to integrate and compute terminal constraints
+[z, xf, x_tf, cFinal, H, tDone]= integrateAndComputeTerminal_minT(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+    at, et, it, Omega_t, omega_t, muVal);
+
+%compute hamiltonian
+
+F = [x_tf(1:end-1) - xf; H;...
+    cFinal];  % terminal error
+
+end
+
+function F = shootingConstTFreeTheta_Trust_minT(lambda0Aug, x0, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t, L0)
+
+lambda0 = lambda0Aug(1:end-1);
+tf = lambda0Aug(end);
+% tf = 10000*(10^(lambda0Aug(end)));
+
+z0 = [lambda0(1:end-1); x0];
+theta_f = lambda0(end);
+
+% Call helper to integrate and compute terminal constraints
+[z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+    at, et, it, Omega_t, omega_t, muVal);
+
+F = [x_tf(1:end-1) - xf; z(end,length(x0));...
+    norm([z(1,1:length(x0)), L0])-1; cFinal];  % terminal error
 
 end
