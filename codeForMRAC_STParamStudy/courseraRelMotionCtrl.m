@@ -51,12 +51,29 @@ mu = 398600.4418;
 % omega   = argument of perigee (rad)
 % nu      = true anomaly (rad)
 
+% p1
+% ChiefOE = [8500 , ...
+%            0.1, ...
+%            deg2rad(33), ...
+%            deg2rad(45), ...
+%            deg2rad(40), ...
+%            deg2rad(85)];
+
+%p3, rel orbit w/o ctrl
 ChiefOE = [8500 , ...
-           0.1, ...
-           deg2rad(33), ...
-           deg2rad(45), ...
+           0, ...
+           deg2rad(53), ...
+           deg2rad(55), ...
            deg2rad(40), ...
-           deg2rad(85)];
+           deg2rad(0)];
+
+% %p4, rel orbit w/o ctrl
+% ChiefOE = [8500 , ...
+%            0.2, ...
+%            deg2rad(53), ...
+%            deg2rad(55), ...
+%            deg2rad(40), ...
+%            deg2rad(0)];
 
 % ---------------- Deputy Orbital Elements ------------------------------
 %
@@ -64,12 +81,29 @@ ChiefOE = [8500 , ...
 %
 % Small offsets approximate formation flying separation.
 
+% p1
+% DeputyOE = [0, ...
+%              10/ChiefOE(1), ...
+%              0, ...
+%              10/ChiefOE(1), ...
+%              0, ...
+%              0] + ChiefOE;
+
+% p3
 DeputyOE = [0, ...
              10/ChiefOE(1), ...
              0, ...
-             10/ChiefOE(1), ...
+             deg2rad(0.01), ...
              0, ...
              0] + ChiefOE;
+
+%p4, rel orbit w/o ctrl
+% DeputyOE = [0, ...
+%              1e-3, ...
+%              deg2rad(0.1), ...
+%              deg2rad(0.1), ...
+%              0, ...
+%              0] + ChiefOE;
 
 % Alternative test case:
 % DeputyOE = [0,10/ChiefOE(1),0,deg2rad(0.01),0,0] + ChiefOE;
@@ -79,11 +113,8 @@ DeputyOE = [0, ...
 % ========================================================================
 
 % Convert chief orbital elements to ECI position and velocity.
-
 [rECI,vECI,DCM_PQW2ECI] = COE2ECI(ChiefOE,mu);
-
 % Convert deputy orbital elements.
-
 [rECI_D,vECI_D,DCM_PQW2ECI_D] = COE2ECI(DeputyOE,mu);
 
 % ========================================================================
@@ -113,7 +144,7 @@ timeFinalF = [0:8:4848];
     @(t, z) relMotionCrtl(t, z, mu), ...
     timeFinalF, ...
     z0F, ...
-    odeset('RelTol',1e-9,'AbsTol',1e-9,'Stats','off'));
+    odeset('RelTol',1e-11,'AbsTol',1e-11,'Stats','off'));
 
 % ========================================================================
 %% RELATIVE MOTION VISUALIZATION (HILL FRAME)
@@ -124,7 +155,9 @@ figure
 % Example time indices chosen for visualization.
 % (beginning, middle, end of trajectory)
 
-for i = [1,126,607]
+for i = [1:length(tF)]
+% for i = [1,126,501]
+% for i = [1,126,607]
 
     % Convert instantaneous inertial states → Hill frame.
 
@@ -158,7 +191,6 @@ end
 % Propagates:
 %
 %   Chief → uncontrolled two-body motion.
-%
 %   Deputy → two-body motion + control acceleration.
 %
 % ========================================================================
@@ -168,11 +200,8 @@ function ds = relMotionCrtl(t, s, muEarth)
 % ---------- STATE EXTRACTION -------------------------------------------
 
 % Chief state
-
 x = s(1:6);
-
 % Deputy state
-
 x_2 = s(7:end);
 
 % ---------- REFERENCE ORBIT GENERATION ---------------------------------
@@ -187,36 +216,39 @@ x_2 = s(7:end);
 %
 % This creates a slightly advanced reference trajectory.
 
-ecc = 0.1;
+% ecc = 0.1;
+% trueAna = TrueAnomalyFromRV(x(1:3),x(4:6),muEarth);
 
-trueAna = TrueAnomalyFromRV(x(1:3),x(4:6),muEarth);
-
-[M,E] = True2MeanAnomaly(trueAna,ecc);
-
-% Desired phase lead
-
-M_dd = M + deg2rad(0.1);
-
-[nu_dd,E] = Mean2TrueAnomaly(M_dd,ecc);
-
+% % p1
+% [M,E] = True2MeanAnomaly(trueAna,ecc);
+% % Desired phase lead
+% M_dd = M + deg2rad(0.1);
+% [nu_dd,E] = Mean2TrueAnomaly(M_dd,ecc);
 % Desired reference orbit
 
-ChiefOE = [8500 , ecc , ...
-           deg2rad(33), ...
-           deg2rad(45), ...
-           deg2rad(40), ...
-           nu_dd];
+% p1
+% ChiefOE = [8500 , ecc , ...
+%            deg2rad(33), ...
+%            deg2rad(45), ...
+%            deg2rad(40), ...
+% 
+% %p3
+% ChiefOE = [8500+10, ...
+%            1e-9, ...
+%            deg2rad(53), ...
+%            deg2rad(55), ...
+%            deg2rad(40), ...
+%            trueAna];
+% [rECI,vECI,DCM_PQW2ECI] = COE2ECI(ChiefOE,muEarth);
 
-[rECI,vECI,DCM_PQW2ECI] = COE2ECI(ChiefOE,muEarth);
-
+rECI = 8510*(x(1:3)/norm(x(1:3)));
+vECI = x(4:6);
+% vECI = sqrt(muEarth/8510)*(x(4:6)/norm(x(4:6)));
 % ---------- Tracking Errors --------------------------------------------
 
 % Relative position error
-
 dr = x_2(1:3) - rECI;
-
 % Relative velocity error
-
 drDot = x_2(4:6) - vECI;
 
 % ---------- STATE DERIVATIVE INITIALIZATION ----------------------------
@@ -224,40 +256,33 @@ drDot = x_2(4:6) - vECI;
 ds = zeros(12,1);
 
 % ---------- Chief Dynamics (Two-body) ----------------------------------
-
 % kinematics
-
 ds(1) = x(4);
 ds(2) = x(5);
 ds(3) = x(6);
 
 % Two-body gravitational acceleration model.
-
 scAcc = @(x) [ ...
  -(muEarth*x(1))/(x(1)^2+x(2)^2+x(3)^2)^(3/2); ...
  -(muEarth*x(2))/(x(1)^2+x(2)^2+x(3)^2)^(3/2); ...
  -(muEarth*x(3))/(x(1)^2+x(2)^2+x(3)^2)^(3/2)];
 
 % chief acceleration
-
 ds(4:6) = scAcc(x);
 
 % ---------- Deputy Dynamics --------------------------------------------
 
 % kinematics
-
 ds(7) = x_2(4);
 ds(8) = x_2(5);
 ds(9) = x_2(6);
 
 % natural gravitational acceleration
-
 ds(10:12) = scAcc(x_2);
 
 % ---------- Reference Acceleration -------------------------------------
 
 % acceleration of desired reference orbit
-
 ds_dd = scAcc([rECI; vECI]');
 
 % ---------- PD CONTROL LAW ---------------------------------------------
@@ -276,9 +301,19 @@ ds_dd = scAcc([rECI; vECI]');
 K_1 = 0.00002;    % position gain
 K_2 = 0.005;      % velocity gain
 
+[rHill,vHill,DCM_ECI2Hill] = ...
+    ECI2CWHRelativeState( ...
+    x(1:3),x(4:6),...     % chief state
+    x_2(1:3),x_2(4:6),muEarth);  % deputy state
+
+ud = 0;%- K_1*( x(1:3) - 8510*(x(1:3)/norm(x(1:3))) );
+% ud =  - K_1*DCM_ECI2Hill'*  [0.5480,-2.1957, 0]';
+% ud =  - K_1*DCM_ECI2Hill'* [0.3405, -3.1924, 0]';
+% ud = - (K_2*eye(3)*drDot + K_1*eye(3)*dr);%- K_1*( x(1:3) - 8510*(x(1:3)/norm(x(1:3))) );
+
 u = -(ds(10:12) - ds_dd) ...
     - K_1*eye(3)*dr ...
-    - K_2*eye(3)*drDot;
+    - K_2*eye(3)*drDot + ud;
 
 % Apply control acceleration.
 
