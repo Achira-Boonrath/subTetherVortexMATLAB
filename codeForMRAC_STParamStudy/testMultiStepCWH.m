@@ -73,7 +73,6 @@ x = traj(:,1);
 y = traj(:,2);
 
 %% --- Animation ---
-%% --- Animation ---
 figure;
 hold on; grid on;
 axis equal;
@@ -94,39 +93,17 @@ xlim([min(x)-200 max(x)+200]);
 ylim([min(y)-200 max(y)+200]);
 
 %% --- Define satellite geometry (body frame) ---
-%
 % % Main body (square)
-body_size = 40;
-% body = body_size/2 * [-1 -1;
-%                       1 -1;
-%                       1  1;
-%                      -1  1]';
-
+body_size = 140;
 % Solar panels (rectangles)
-panel_length = 80;
-panel_width  = 20;
+panel_length = 180;
+panel_width  = 120;
 params.BodySize    = body_size;
 params.PanelLength = panel_length;
 params.PanelWidth  = panel_width;
 
-%
-% left_panel = [ -body_size/2, -panel_width/2;
-%                -body_size/2 - panel_length, -panel_width/2;
-%                -body_size/2 - panel_length,  panel_width/2;
-%                -body_size/2,  panel_width/2 ]';
-%
-% right_panel = [ body_size/2, -panel_width/2;
-%                 body_size/2 + panel_length, -panel_width/2;
-%                 body_size/2 + panel_length,  panel_width/2;
-%                 body_size/2,  panel_width/2 ]';
-%
-% %% --- Create patch objects ---
-% h_body = patch('XData', [], 'YData', [], 'FaceColor', 'g');
-% h_left = patch('XData', [], 'YData', [], 'FaceColor', 'b');
-% h_right = patch('XData', [], 'YData', [], 'FaceColor', 'b');
-
 % Phase label
-phase_text = text(0.05,0.95,'','Units','normalized');
+% phase_text = text(0.05,0.95,'','Units','normalized');
 
 %% --- Animation loop ---
 v = VideoWriter('rendezvous.mp4','MPEG-4');
@@ -153,23 +130,6 @@ for k = 1:10:length(x)
     else
         h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params, h_sat);
     end
-
-    % R = [cos(theta_rot) -sin(theta_rot);
-    %      sin(theta_rot)  cos(theta_rot)];
-    %
-    % % Rotate and translate shapes
-    % body_rot = R * body + [xc; yc];
-    % left_rot = R * left_panel + [xc; yc];
-    % right_rot = R * right_panel + [xc; yc];
-    %
-    % % Update graphics
-    % set(h_body, 'XData', body_rot(1,:), 'YData', body_rot(2,:));
-    % set(h_left, 'XData', left_rot(1,:), 'YData', left_rot(2,:));
-    % set(h_right,'XData', right_rot(1,:), 'YData', right_rot(2,:));
-    %
-    % % Update phase text
-    % current_phase = phase_id(k);
-    % set(phase_text, 'String', sprintf('Phase %d', current_phase));
 
     drawnow;
     pause(0.1);
