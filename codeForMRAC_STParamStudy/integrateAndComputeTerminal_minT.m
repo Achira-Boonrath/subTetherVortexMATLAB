@@ -2,7 +2,11 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 % Helper that integrates the Hamiltonian ODE and computes terminal constraints.
 
     function [position,isterminal,direction] = appleEventsFcn(t,z)
-        position = (abs(z(7)) > 1e-9 ); % The value that we want to be zero
+        position = (abs(z(7)) > 1e-7 ); % The value that we want to be zero
+        % if position == 0
+        %    disp(position)
+        % end
+
         isterminal = 1;  % Halt integration
         direction = 0;   % The zero can be approached from either direction
     end
@@ -11,9 +15,6 @@ if tf > 0.9e+6
     options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z,te,~, ~] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     tDone = te;
-    if isempty(tDone) == 1
-        tDone = tf;
-    end
 else
     options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
     [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
@@ -37,6 +38,11 @@ ax = L(4)/(nLv^0.5);
 ay = L(5)/(nLv^0.5);
 az = L(6)/(nLv^0.5);
 mC = x(end);
+
 H = L(1)*x(4) + L(2)*x(5) + L(3)*x(6) - L(4)*((muEarth*x(1))/nPos^(3/2) - (Tmax*ax)/mC) - L(5)*((muEarth*x(2))/nPos^(3/2) ...
     - (Tmax*ay)/mC) - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax*g0)/Isp + L0(1);
+    if isempty(tDone) == 1
+        tDone = tf;
+        H = 1e+6;
+    end
 end
