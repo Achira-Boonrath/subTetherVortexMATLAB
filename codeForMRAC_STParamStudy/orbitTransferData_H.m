@@ -1,8 +1,6 @@
 function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     close all; 
-    %% 
-    
-    
+
     %% Problem data
     
     % r0 = 780+6378;
@@ -45,107 +43,6 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     %% Define symbolic variables for deriving equations
     lambda0_guess = 1e-4*ones(length(x0),1);
     
-    % State symbols (position and velocity)
-    syms x y z vx vy vz n muEarth ...
-        ax ay az u mC Tmax Isp g0 real
-    
-    % Build state and control symbolic vectors for clarity
-    X = [x; y; z; vx; vy; vz; mC];            % symbolic state vector (4x1)
-    Xnum = sym('x', [length(x0) 1],'real');
-    U = [ax; ay; az; u];
-    
-    % Define the dynamics f = dX/dt (Two-Body Keplerian dynamics with variable mass)
-    f = [vx; ...
-        vy; ...
-        vz; ...
-        -x*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ax*(Tmax/mC)*u; ...
-        -y*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + ay*(Tmax/mC)*u; ...
-        -z*muEarth/((x^(2) + y^(2) + z^(2))^(3/2)) + az*(Tmax/mC)*u; ...
-        -(Tmax/Isp*g0)*u; ...
-        ];
-    % Symbolic costate vector (7x1)
-    Lvec = sym('L', [length(x0) 1],'real');
-    
-    %% Build symbolic ODEs for states and costates using helper
-    optUSet =[ - Lvec(4)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...
-                 - Lvec(5)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-                 - Lvec(6)/sqrt(Lvec(5)^2 + Lvec(4)^2 + Lvec(6)^2);...  
-                 U(end)];
-    
-    V = 0.5*U(end)'*U(end); % the instantaneous cost on the control (scalar).
-    % The function odeDynAndLag should return symbolic expressions for xdot and Ldot
-    [star_xdot, star_Ldot] = odeDynAndLag_constT(Lvec, X, Xnum, U, f, V, optUSet);
-    
-    % Compose the equations array:
-    % - First the costate dynamics (Ldot)
-    % - Then the state dynamics (xdot)
-    % This ordering matches how we will stack z = [lambda; x] for integration.
-    eqns = [
-        (star_Ldot).',         % costate ODEs (row)
-        (star_xdot).'          % state ODEs (row)
-        ];
-    eqns = simplify(eqns);
-    
-    % Substitute the numeric value for mean motion to simplify expressions
-    uTest = 1;
-    eqns = subs( (eqns), muEarth, muVal);
-    
-    % chem prop
-    eqns = subs( (eqns), Tmax, 425*4);
-    eqns = subs( (eqns), Isp, 230);
-    
-    % electric prop
-    % eqns = subs( (eqns), Tmax, 0.1);
-    % eqns = subs( (eqns), Isp, 3000);
-    
-    eqns = subs( (eqns), g0, 9.81);
-    eqns = subs( (eqns), U(end), uTest);
-    % eqns = subs( (eqns), mC, 1000);
-    
-    eqns = simplify(eqns);
-    %% Build a function handle that substitutes numeric z = [lambda; x] into the
-    % symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
-    funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)] );
-    
-    %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
-    % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
-    % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
-    
-    muEarth=muVal;
-    
-    % chem prop
-    Tmax=425*4;
-    Isp=230; 
-    
-    % electric prop
-    % Tmax=0.1;
-    % Isp=3000; 
-    
-    g0=9.81;
-    epsilon=1;
-    ds = hamiltonian_odeConstT(0, [x0;x0*0.1], muVal, Tmax, Isp, g0, epsilon, uTest);
-    
-    %check 
-    dsDiff = double( funcSubs( [x0;x0*0.1]) ) - ds;
-    
-    %% Solve two-point boundary value problem via shootingConstT
-    % First try a single invocation of shootingConstT with the initial guess
-    
-    % chem prop
-    F = shootingConstT(lambda0_guess, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
-    
-    % electric prop
-    % lambda0_guess = [lambda0_guess; pi/2];
-    % F = shootingConstTFreeTheta(lambda0_guess,x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t);
-    %%  Use particleswarm to find lambda0 that makes the terminal state match xf
-    
-    % objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
-    % chem prop
-    objfun = @(lam0) norm(shootingConstT(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon))^2;
-    
-    % electric prop
-    % objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
-    
     nvars = length(lambda0_guess);
 
     theta_f = 0;
@@ -163,18 +60,27 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     % sqrt(muVal/rf)
     x0(4:6) = v_pf;
 
-        % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
+    muEarth=muVal;
+    
+    % chem prop
+    Tmax=425*4;
+    Isp=230; 
+
+    g0=9.81e-3;
+    epsilon=1;
+
+        %% Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
     % z0 = [lambda0; x0];
     % chem prop
-    z0 = [1e-5*lambda0_guess; x0];
+    z0 = [1e-8*lambda0_guess; x0];
 
     % electric prop
     % z0 = [lambda0(1:end-1); x0];
 
-    % options = odeset('RelTol', 1e-7,'AbsTol', 1e-7,'Stats','off');
+    % options = odeset('RelTol', 1e-7,'AbsTol', 1e-9,'Stats','off');
     options = odeset('Stats','off');
     % Init orbit
-    z0Init = [1e-5*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
+    z0Init = [1e-8*lambda0_guess; [r0 0 0 0 sqrt(muVal/r0) 0 1000]'];
     periodInit = 2*pi*sqrt( (r0^3) /muVal  );
     timeFinalInit = linspace(0, periodInit, 45);
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
@@ -185,10 +91,10 @@ function [t, x, lambda, u] = orbitTransferData_H(at, theta_f, r0)
     t = t + tInit(end);
 
     % F orbit
-    z0F = [1e-5*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
+    z0F = [1e-8*lambda0_guess; [-rf 0 0 0 -sqrt(muVal/rf) 0 1000]'];
     periodF = 2*pi*sqrt( (rf^3) /muVal  );
     timeFinalF = linspace(0, periodF, 45) ;
-    [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('AbsTol', 1e-7,'Stats','off'));
+    [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('AbsTol', 1e-9,'Stats','off'));
     tF = tF + t(end);
     
     z = [zInit; z; zF];
