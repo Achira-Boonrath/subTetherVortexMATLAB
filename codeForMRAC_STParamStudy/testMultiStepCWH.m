@@ -109,6 +109,7 @@ params.PanelWidth  = panel_width;
 v = VideoWriter('rendezvous.mp4','MPEG-4');
 open(v);
 alignVel = false;
+% alignVel = true;
 for k = 1:10:length(x)
 
     % Current position
@@ -116,6 +117,7 @@ for k = 1:10:length(x)
     yc = y(k);
 
     % Optional: align satellite with velocity direction
+    traj(k,4:5) = traj(k,4:5)/norm(traj(k,4:5));
     vx = traj(k,4);
     vy = traj(k,5);
     if alignVel
