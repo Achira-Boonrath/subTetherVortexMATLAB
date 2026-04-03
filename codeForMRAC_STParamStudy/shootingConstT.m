@@ -1,13 +1,30 @@
 function F = shootingConstT(lambda0,x0,xf,tf, muEarth, Tmax, Isp, g0, epsilon)
 
-    z0 = [lambda0; x0];
-    % S = warning('MATLAB:ode45:IntegrationTolNotMet', 'off');
-    options = odeset('RelTol', 1e-8,'AbsTol', 1e-8,'Stats','off');
-    [~,z] = ode45(@(t,z) hamiltonian_odeConstT(t,z, muEarth, Tmax, Isp, g0, epsilon),[0 tf],z0,options);
-    % warning(S);
+% Additional parameters for electric prop
+at = 42164.0;             % semi-major axis [km]
+rf = at;
+et = 0.001;                % eccentricity
+it = deg2rad(2.0);        % inclination
+Omega_t = deg2rad(0);   % RAAN
+omega_t = deg2rad(0);   % argument of periapsis
+% Symbolic substitution based on propulsion type
+muVal = 398600.4418;     % Earth
 
-    x_tf = z(end,end-length(x0)+1:end).';
-    % F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0))/(1.0e+4)];  % terminal error
-    F = [x_tf(1:3) - xf(1:3); (x_tf(4:end-1) - xf(4:end-1))*(1e+2); z(end,length(x0))/(1.0e+4)]/(1.0e+3);  % terminal error
+L0= costate_from_D( lambda0(1:end) );
+
+z0 = [L0(2:end); x0];
+theta_f = 0;
+
+% Call helper to integrate and compute terminal constraints
+[z, ~, x_tf, cFinal]= integrateAndComputeTerminal(z0, tf, muEarth, Tmax, Isp, g0, epsilon, L0, theta_f, ...
+    at, et, it, Omega_t, omega_t, muVal);
+
+%compute hamiltonian
+
+F = [x_tf(1:3) - xf(1:3); (x_tf(4:end-1) - xf(4:end-1))*1000; z(end,length(x0))];  % terminal error
+
+if  abs( z(end,length(x0)) ) > 1e+1
+    F(end) = F(end) + 1e+5;
+end
 
 end
