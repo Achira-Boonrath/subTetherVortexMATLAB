@@ -1,4 +1,4 @@
-function optControl_singleShoot_Demo2
+function [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit)
 % optControl_singleShoot_2body
 % Solves a single-shootingConstT optimal control problem
 % The Hamiltonian system (state + costate) is integrated and fsolve is used
@@ -15,7 +15,7 @@ function optControl_singleShoot_Demo2
 % - odeDynAndLag_constT : returns symbolic xdot and Ldot expressions (dynamics and costate ODEs)
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
-close all; clear all; clc
+% close all; clear all; clc
 propulsionType = 'chemical'; % Options: 'chemical', 'electric'
 % propulsionType = 'electric'; % Options: 'chemical', 'electric'
 %%
@@ -23,21 +23,17 @@ propulsionType = 'chemical'; % Options: 'chemical', 'electric'
 %% Problem data
 
 % Symbolic substitution based on propulsion type
-muVal = 398600.4418;     % Earth
+muVal = muEarth;     % Earth
 uTest = 1;
 minT = 1;
 switch propulsionType
     case 'chemical'
         % chem prop
 
-        r0 = 780+6378;
-        rf = 2970+6378;
-        aTrans = (r0 + rf)/2;
-        period = 2*pi*sqrt( (aTrans^3) /muVal  );
-        tf = period*0.5;                % Final time (seconds)
-
-        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
-        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
+        r0 = norm(x0(1:3));
+        aTrans = ( (tf/pi)^2 * muVal )^(1/3);
+        rf = 2*aTrans - r0;
+        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 x0(7)-200]';             % Desired terminal state at t = tf (Mass is free)
 
         % if minT ==0
         lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
@@ -52,16 +48,12 @@ switch propulsionType
         % end
 
         % lambda0_guess = ub;
-        lambda0_guess = [0.060776702600281   0.000298627734904   1.000667203169005   0.500000000000000   0.500000000000000   0.069330582561975   0.672142996295746]';
 
     case 'electric'
         % electric prop
 
-        x0 = [41797.671293047104, 5214.9122634261175, 184.49268401666282, -0.3809149562899149, 3.052197624291683, 0.10656315631268225, 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         disp("initial radius")
         norm( x0(1:3) )
-
-        tf = 11682.21981822656;%9345.775854692882*1.25;
         r0 = norm(x0(1:3));
 
         % if minT ==0
@@ -83,13 +75,11 @@ end
 % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
 % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
 
-muEarth=muVal;
+% muEarth is passed in
 
 switch propulsionType
     case 'chemical'
-        % Tmax=425*80*1e-3;
-        Tmax=40000*1e-3;
-        Isp=230;
+        % Tmax and Isp are passed in
     case 'electric'
         Tmax=0.1*1e-3; %in kN
         Isp=3000;
@@ -103,8 +93,8 @@ switch propulsionType
         omega_t = deg2rad(0);   % argument of periapsis
 end
 
-g0=9.81*1e-3; %in km/s^2
-epsilon=1;
+% g0=9.81*1e-3; %in km/s^2
+% epsilon=1;
 ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
 
 %% Solve two-point boundary value problem via shootingConstT
@@ -153,7 +143,7 @@ switch propulsionType
     case 'chemical'
         lambda0 = fsolve(@(lam0) shootingConstT(lam0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon), ...
             lambda0_guess, ...
-            optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 3000));
+            optimoptions('fsolve', 'Display', 'off', "MaxFunctionEvaluations", 3000));
     case 'electric'
         if minT == 0
             L0_guess = costate_from_D( lambda0_guess(1:end-1) );
@@ -190,18 +180,22 @@ switch propulsionType
     case 'chemical'
         L0= costate_from_D( lambda0(1:end) );
         z0 = [L0(2:end); x0];
-        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon ), [0 tf], z0);
+        timeFinal = linspace(0, tf, 300);
+        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon ), timeFinal, z0, options);
     case 'electric'
 
         if minT ==0
             L0= costate_from_D( lambda0(1:end-1) );
             z0 = [L0(2:end); x0];
-            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0);
+            timeFinal = linspace(0, tf, 300);
+            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), timeFinal, z0, options);
         else
             lambda0 = lambda0(1:end-1);
             L0= costate_from_D( lambda0(1:end-1) );
             z0 = [L0(2:end); x0];
 
-            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0);
+            timeFinal = linspace(0, tf, 300);
+            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), timeFinal, z0, options);
         end
 end
+t = t + tInit(end);

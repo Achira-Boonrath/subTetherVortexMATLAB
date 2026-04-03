@@ -53,8 +53,9 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     %% Optimization & ODE Boundary Values
     % Initialize costate guess for optimal control tracking (using Hamiltonian formulation)
     % This is set near zero to evaluate basic or unpowered propagation.
-    lambda0_guess = 1e-4*ones(7,1);
-
+    % lambda0_guess = 1e-4*ones(7,1);
+    % for minE
+    lambda0_guess = [0.060776702600281   0.000298627734904   1.000667203169005   0.500000000000000   0.500000000000000   0.069330582561975   0.672142996295746]';
 
     % Update x0 using a purely analytical transfer orbit injection velocity
     % Compute required parameters for Hohmann transfer intersecting r_mag
@@ -81,11 +82,12 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
 
     % 2. Simulate the transfer orbit using the computed Hohmann injection velocity
-    % Stack initial condition z0 = [lambda0; x0] to integrate the ODE
-    z0 = [1e-8*lambda0_guess; x0];
-    timeFinal = linspace(0, tf, 300) ;
-    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
-    t = t + tInit(end); % Shift transfer time array to proceed strictly after initial orbit phase
+     minEctrl = false;
+    if minEctrl == false
+    [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
+    else
+    [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
+    end
 
     % 3. Simulate the target (Final) orbit to visualize where the transfer terminates
     % Set boundary from the previously determined apoapsis condition
@@ -114,4 +116,12 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     % The control matrix formulation (u) is typically extracted via costates.
     % Currently deactivated in favor of unpowered phasing.
     u = 0;
+end
+
+function [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit)
+% Stack initial condition z0 = [lambda0; x0] to integrate the ODE
+z0 = [1e-8*lambda0_guess; x0];
+timeFinal = linspace(0, tf, 300) ;
+[t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
+t = t + tInit(end); % Shift transfer time array to proceed strictly after initial orbit phase
 end
