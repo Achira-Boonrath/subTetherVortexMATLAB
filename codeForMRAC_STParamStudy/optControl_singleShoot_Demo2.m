@@ -1,4 +1,4 @@
-function [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit)
+function [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit)
 % optControl_singleShoot_2body
 % Solves a single-shootingConstT optimal control problem
 % The Hamiltonian system (state + costate) is integrated and fsolve is used
@@ -33,8 +33,8 @@ switch propulsionType
         r0 = norm(x0(1:3));
         aTrans = ( (tf/pi)^2 * muVal )^(1/3);
         rf = 2*aTrans - r0;
-        xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 x0(7)-200]';             % Desired terminal state at t = tf (Mass is free)
-
+        % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 x0(7)-200]';             % Desired terminal state at t = tf (Mass is free)
+        xf = [xf(1:6); 200];
         % if minT ==0
         lb =  [0, 0, 0, 0, 0, 0, 0,... % costates D
             ]'; % thetaf

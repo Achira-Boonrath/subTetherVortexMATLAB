@@ -1,7 +1,7 @@
-function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
+function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg)
     close all; 
 %% ORBITTRANSFERDATA_H  Generates data for orbital transfer simulations.
-%   [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
+%   [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg)
 % 
 %   Inputs:
 %       af          - Final orbit semi-major axis (km)
@@ -9,6 +9,7 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
 %       theta_f_deg - Target true anomaly in degrees
 %       a0          - Initial orbit semi-major axis (km)
 %       e0          - Initial orbit eccentricity
+%       omega_f_deg - Final orbit argument of periapsis in degrees
 %
 %   Outputs:
 %       t           - Time vector spanning the init, transfer, and final phases
@@ -19,6 +20,7 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     %% Problem Data & Constants
     muVal = 398600; % Earth's gravitational parameter (km^3/s^2)
     theta_f = deg2rad(theta_f_deg); % Convert target true anomaly to radians
+    omega_f = deg2rad(omega_f_deg); % Convert target argument of periapsis to radians
     
     %% Compute Initial State (Initial Orbit at Periapsis)
     % Compute the parameter (p0) and radius at periapsis (r0) of the initial orbit
@@ -44,10 +46,15 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     % Determine a baseline orbital transfer duration (tf)
     aTrans = (rf_apo + r0)/2;
     period = 2*pi*sqrt( (aTrans^3) /muVal  );
-    if theta_f == 0
+    % if theta_f == 0
+    %     tf = period * 0.5; % Hohmann transfer baseline time (half period)
+    % else
+    %     tf = period*(theta_f/(2*pi)); % Wait time defined by angular separation
+    % end
+    if abs(omega_f) < 1e-4
         tf = period * 0.5; % Hohmann transfer baseline time (half period)
     else
-        tf = period*(theta_f/(2*pi)); % Wait time defined by angular separation
+        tf = period* ( 0.5 + 1.1*(omega_f/(2*pi)) ); % Wait time defined by angular separation
     end
     
     %% Optimization & ODE Boundary Values
@@ -71,6 +78,17 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     g0 = 9.81e-3; % Standard gravity constant (km/s^2)
     epsilon = 1; % Smoothing parameter for control law
 
+    %% Set boundary from the previously determined apoapsis condition
+    pf_orbit = af * (1 - ef^2);
+    rf_apo = pf_orbit / (1 - ef);
+    v_scale_f = sqrt(muVal / pf_orbit);
+    vf_apo = v_scale_f * (ef - 1);
+    
+    r_apo_x = -rf_apo * cos(omega_f);
+    r_apo_y = -rf_apo * sin(omega_f);
+    v_apo_x = -vf_apo * sin(omega_f);
+    v_apo_y = vf_apo * cos(omega_f);
+    xf = [r_apo_x r_apo_y 0 v_apo_x v_apo_y 0 1000]';
     %% ODE Integration for Phasing
     
     options = odeset('Stats','off');
@@ -82,20 +100,15 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0)
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
 
     % 2. Simulate the transfer orbit using the computed Hohmann injection velocity
-     minEctrl = false;
-    if minEctrl == false
+    minEctrl = false;
+    if abs(omega_f) < 1e-4
     [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
     else
-    [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
+    [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
     end
 
     % 3. Simulate the target (Final) orbit to visualize where the transfer terminates
-    % Set boundary from the previously determined apoapsis condition
-    pf_orbit = af * (1 - ef^2);
-    rf_apo = pf_orbit / (1 - ef);
-    v_scale_f = sqrt(muVal / pf_orbit);
-    vf_apo = v_scale_f * (ef - 1);
-    z0F = [1e-8*lambda0_guess; [-rf_apo 0 0 0 vf_apo 0 1000]'];
+    z0F = [1e-8*lambda0_guess; [r_apo_x r_apo_y 0 v_apo_x v_apo_y 0 1000]'];
     
     periodF = 2*pi*sqrt( (af^3) /muVal  );
     timeFinalF = linspace(0, periodF, 300) ;

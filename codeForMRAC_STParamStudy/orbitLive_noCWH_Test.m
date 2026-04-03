@@ -1,7 +1,8 @@
-orbitSemiMajorAxis1 = 30700; %km
+orbitSemiMajorAxis1 = 20700; %km
 orbitEccentricity1 = 0.52; % final orbit eccentricity
 orbitSemiMajorAxis0 = 18100; %km
 orbitEccentricity0 = 0.31; % initial orbit eccentricity
+orbitArgPeriapsis1 = 20; % final orbit argument of periapsis (degrees)
 
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 
@@ -9,7 +10,7 @@ orbitTrueAnamoly = 180;
 r0 = orbitSemiMajorAxis0 * (1 - orbitEccentricity0^2) / (1 + orbitEccentricity0); % initial periapsis
 orbitSemiMajorAxis = (orbitSemiMajorAxis1 + orbitSemiMajorAxis0)/2;
 
-[t, x, lambda, u] = orbitTransferData_H(orbitSemiMajorAxis1, orbitEccentricity1, orbitTrueAnamoly, orbitSemiMajorAxis0, orbitEccentricity0);
+[t, x, lambda, u] = orbitTransferData_H(orbitSemiMajorAxis1, orbitEccentricity1, orbitTrueAnamoly, orbitSemiMajorAxis0, orbitEccentricity0, orbitArgPeriapsis1);
 
 %% Problem data
 muVal = 398600;
@@ -73,13 +74,15 @@ dy = y_max - y_min; if dy==0, dy=1; end
     r0_orbit = p0 ./ (1 + orbitEccentricity0 * cos(th));
     hInit = plot(r0_orbit .* cos(th), r0_orbit .* sin(th), 'k--', 'DisplayName', 'Initial Orbit');
     
+    omega_f = deg2rad(orbitArgPeriapsis1);
     pf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2);
     rf_orbit = pf ./ (1 + orbitEccentricity1 * cos(th));
-    hFinal = plot(rf_orbit .* cos(th), rf_orbit .* sin(th), 'r-.', 'DisplayName', 'Target Orbit');
+    hFinal = plot(rf_orbit .* cos(th + omega_f), rf_orbit .* sin(th + omega_f), 'r-.', 'DisplayName', 'Target Orbit');
 
     % Plot the target state
-    target_x = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1 * cos(theta_f)) * cos(theta_f);
-    target_y = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1 * cos(theta_f)) * sin(theta_f);
+    r_target = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1 * cos(theta_f));
+    target_x = r_target * cos(theta_f + omega_f);
+    target_y = r_target * sin(theta_f + omega_f);
     hTarget = plot(target_x, target_y, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target Point');
    
     % Create animated line for trajectory and marker for satellite
