@@ -1,8 +1,8 @@
-orbitSemiMajorAxis1 = 20700; %km
+orbitSemiMajorAxis1 = 40700; %km
 orbitEccentricity1 = 0.52; % final orbit eccentricity
 orbitSemiMajorAxis0 = 18100; %km
 orbitEccentricity0 = 0.31; % initial orbit eccentricity
-orbitArgPeriapsis1 = 20; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis1 = 40; % final orbit argument of periapsis (degrees)
 
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 
