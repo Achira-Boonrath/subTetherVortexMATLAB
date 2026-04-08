@@ -234,14 +234,23 @@ function [ds] = stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s, args)
 
     distAttPt_to_D = ([0.0, 0.0,  0.0]');
     for i = [1:4]
+        % if i == 1
+        %     distAttPt_to_D = ([-0.5*targetSideLengthY, 0.0,  -5.1 ]');
+        % elseif i == 2
+        %     distAttPt_to_D = ([-0.5*targetSideLengthY,0.0,  5.1 ]');
+        % elseif i == 3
+        %     distAttPt_to_D = ([0.5*targetSideLengthY, 0.0, -5.1 ]');
+        % elseif i == 4
+        %     distAttPt_to_D = ([0.5*targetSideLengthY,0.0,  5.1 ]');
+        % end 
         if i == 1
-            distAttPt_to_D = ([-0.5*targetSideLengthY, 0.0,  -5.1 ]');
+            distAttPt_to_D = ([-0.5*targetSideLengthY,0.0,  targetSideLengthZ(1) ]');
         elseif i == 2
-            distAttPt_to_D = ([-0.5*targetSideLengthY,0.0,  5.1 ]');
+            distAttPt_to_D = ([-0.5*targetSideLengthY,0.0,  targetSideLengthZ(2) ]');
         elseif i == 3
-            distAttPt_to_D = ([0.5*targetSideLengthY, 0.0, -5.1 ]');
+            distAttPt_to_D = ([0.5*targetSideLengthY, 0.0, targetSideLengthZ(3) ]');
         elseif i == 4
-            distAttPt_to_D = ([0.5*targetSideLengthY,0.0,  5.1 ]');
+            distAttPt_to_D = ([0.5*targetSideLengthY,0.0,  targetSideLengthZ(4) ]');
         end 
 
         % For Tension in links

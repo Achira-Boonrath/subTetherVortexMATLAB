@@ -38,7 +38,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
         fbControl = 'MRAC';
-        MRAC_v = 1; % Version of MRAC being used
+        MRAC_v = 2; % Version of MRAC being used
         
         % Set thrust magnitude from MRAC parameters
         FT_const = dataMRAC.MRACparams(8);
@@ -117,7 +117,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         Kvec = [data.inertialMTParams(end-2), threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
         cVec = [data.inertialMTParams(end-1), threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
 
-
+        %% Varying Target Params
+        debrisSideLengthZ = [-5.1, 5.1, -5.1, 5.1];
         %% Set Sim Params
         % system params %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.massPoint1= massPoint1; 
@@ -159,7 +160,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         if MRAC_v == 1
             [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args(t,s,args), tspan, s0, options);
         else 
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args_mex(t,s,args), tspan, s0, options);
+            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s,args), tspan, s0, options);
         end
 
         % Measure time taken for integration
