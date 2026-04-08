@@ -66,7 +66,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             s0(36) = Kvec(1);  % range = linspace( Kvec(1)*0.25 , Kvec(1)*2 , 5)
             s0(37) = cVec(1);  % range = linspace( cVec(1)*0.25 , cVec(1)*2 , 5)
             args.L0 = 15*0.9; % range = linspace( 13.5*0.25 , 13.5*2 , 5)
-            args.kA = 1*chaserM*3.8*(1.1); % range = linspace( 6688*0.25 , 6688*2 , 5)
+            args.kA = 6688*2; % range = linspace( 6688*0.25 , 6688*2 , 5)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             s0(38:39) = [0, 0];
@@ -157,7 +157,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         tStart = tic; 
         % Solve the system of ODEs using ode23
         if MRAC_v == 1
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args_mex(t,s,args), tspan, s0, options);
+            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args(t,s,args), tspan, s0, options);
         else 
             [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args_mex(t,s,args), tspan, s0, options);
         end
@@ -273,9 +273,9 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % dataforplot=data.state_vec
         runFuncForOpt = 0;
         if runFuncForOpt == 0
-            save(sprintf('subTetherMRAC_v%d_kr%.0f.mat',MRAC_v,s0(35)), 'state_vec', 't_plot', 'elong_mt', 'FmagST')
+            save(sprintf('subTetherMRAC_v%d_kA_%.0f.mat',MRAC_v,args.kA), 'state_vec', 't_plot', 'elong_mt', 'FmagST');
 
-            filenames = {'subTetherMRAC_v2_kr18750.mat','subTetherMRAC_v2_kr28125.mat', 'subTetherMRAC_v2_kr37500.mat', 'subTetherMRAC_v2_kr46875.mat', 'subTetherMRAC_v2_kr56250.mat'};
+            filenames = {'subTetherMRAC_v1_kA_1672.mat','subTetherMRAC_v1_kA_4598.mat', 'subTetherMRAC_v1_kA_7524.mat', 'subTetherMRAC_v1_kA_10450.mat', 'subTetherMRAC_v1_kA_13376.mat'};
             % Initialize arrays
             t_plot_all = cell(5, 1);
             elong_mt_all = cell(5, 1);
