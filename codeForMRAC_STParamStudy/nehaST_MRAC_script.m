@@ -158,9 +158,9 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         tStart = tic; 
         % Solve the system of ODEs using ode23
         if MRAC_v == 1
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args(t,s,args), tspan, s0, options);
+            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_MRAC1_args_mex(t,s,args), tspan, s0, options);
         else 
-            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args(t,s,args), tspan, s0, options);
+            [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_AdaptiveLinear_args_mex(t,s,args), tspan, s0, options);
         end
 
         % Measure time taken for integration
