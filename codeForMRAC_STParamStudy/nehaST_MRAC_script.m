@@ -34,11 +34,31 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % load("dataIC_ForSTrun_Neha_007.mat");
     % load("dataForNI1_009_1MT_compare.mat")
 
+    %% Varying Target Params
+    TargetH = 10.2;
+    % debrisSideLengthZ = [-0.5*TargetH, 0.5*TargetH, -0.5*TargetH, 0.5*TargetH];
+
+    % MODIFY THE TARGET COM OFFSET DISTANCE HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    debrisCoMOffsetScalar = -3.0; % range = linspace( -0.5 , -5.0 , 10) 
+    offsetAtt1 = -0.5*TargetH - debrisCoMOffsetScalar; 
+    debrisSideLengthZ = [offsetAtt1, TargetH - abs(offsetAtt1), offsetAtt1, TargetH - abs(offsetAtt1)];
+
+    debrisCoMzOffset = [0, 0, 0.5*TargetH-abs(debrisSideLengthZ(1))]';
+    states0_debris(1:3) = states0_debris(1:3) - rotMat_D_A_I' * debrisCoMzOffset;
+    s0 = [states0_chaser; states0_debris;states0_connPoint1] ;
+
+    % compute new inertia matrix using parallel axis theorem
+    % minus M*distances because "debrisI" is the original matrix abt.
+    % original CoM before the offset
+    debrisI = debrisI - debrisM * diag([(debrisCoMzOffset(2)^2 + debrisCoMzOffset(3)^2),...
+                                        (debrisCoMzOffset(1)^2 + debrisCoMzOffset(3)^2),...
+                                        (debrisCoMzOffset(2)^2 + debrisCoMzOffset(1)^2)]);
+
     for GG = [1]
         %% Adaptive states
         % Set feedback control mode to MRAC (Model Reference Adaptive Control)
         fbControl = 'MRAC';
-        MRAC_v = 2; % Version of MRAC being used
+        MRAC_v = 1; % Version of MRAC being used
         
         % Set thrust magnitude from MRAC parameters
         FT_const = dataMRAC.MRACparams(8);
@@ -117,8 +137,6 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         Kvec = [data.inertialMTParams(end-2), threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
         cVec = [data.inertialMTParams(end-1), threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
 
-        %% Varying Target Params
-        debrisSideLengthZ = [-5.1, 5.1, -5.1, 5.1];
         %% Set Sim Params
         % system params %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.massPoint1= massPoint1; 
