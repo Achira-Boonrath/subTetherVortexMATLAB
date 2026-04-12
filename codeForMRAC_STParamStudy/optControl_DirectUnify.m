@@ -1,4 +1,4 @@
-function optControl_DirectUnify(method_choice, system_choice)
+function optControl_DirectUnify(method_choice, system_choice, enforced_term_states)
     % UNIFIED DIRECT OPTIMAL CONTROL
     % Solves the Optimal Control Problem (OCP) using either:
     %  Method:
@@ -9,16 +9,21 @@ function optControl_DirectUnify(method_choice, system_choice)
     %  1) 'pendulum'      - Simple Inverted Pendulum
     %  2) 'cartpole'      - Cart-Pole
     %
+    %  enforced_term_states: Array of state indices to strictly enforce at the final time.
+    %
     % Usage:
     %   optControl_DirectUnify('shooting', 'pendulum')
-    %   optControl_DirectUnify('collocation', 'cartpole')
-    %   optControl_DirectUnify() % Defaults to collocation, pendulum
+    %   optControl_DirectUnify('collocation', 'cartpole', [1, 3]) % Enforce only position & angle
+    %   optControl_DirectUnify() % Defaults to collocation, pendulum, all states enforced
 
     if nargin < 1
         method_choice = 'collocation'; % default method
     end
     if nargin < 2
         system_choice = 'pendulum';    % default system
+    end
+    if nargin < 3
+        enforced_term_states = [];     % Flag for default initialization after nx is known
     end
     
     close all; clc;
@@ -93,6 +98,11 @@ function optControl_DirectUnify(method_choice, system_choice)
         
     else
         error('Unknown system_choice. Use ''pendulum'' or ''cartpole''.');
+    end
+
+    % Set default enforced terminal states if not provided (enforce everything)
+    if isempty(enforced_term_states)
+        enforced_term_states = 1:nx;
     end
 
     %% fmincon options
@@ -430,8 +440,8 @@ function optControl_DirectUnify(method_choice, system_choice)
             x = xint_ss(end, :)';
         end
         
-        % Enforce final state equality constraint
-        ceq = x - xf_des;
+        % Enforce final state equality constraint only on selected states
+        ceq = x(enforced_term_states) - xf_des(enforced_term_states);
         c = [];
     end
 
@@ -494,8 +504,10 @@ function optControl_DirectUnify(method_choice, system_choice)
 
         % Preallocate equality constraint vector:
         % For each interval we have nx midpoint constraints and nx defect constraints,
-        % so total nx*(2*N). Plus nx initial condition constraints.
-        ceq = zeros(nx*(2*N) + nx, 1);
+        % so total nx*(2*N). Plus nx initial condition constraints,
+        % and finally the selected terminal condition constraints.
+        n_term = length(enforced_term_states);
+        ceq = zeros(nx*(2*N) + nx + n_term, 1);
         cnt = 0;
 
         % Loop over each interval and build constraints
@@ -528,6 +540,12 @@ function optControl_DirectUnify(method_choice, system_choice)
 
         % Initial condition equality constraint
         ceq(cnt + (1:nx)) = X_coll(:,1) - xd0;
+        cnt = cnt + nx;
+        
+        % Terminal condition equality constraint
+        if n_term > 0
+            ceq(cnt + (1:n_term)) = X_coll(enforced_term_states, end) - xf_des(enforced_term_states);
+        end
         c = [];
     end
 end
