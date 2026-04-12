@@ -57,7 +57,8 @@ right_rot = R * right_panel + [xc; yc];
 %% --- Create or update patches ---
 if isempty(h)
     % Create new patches
-    h.body  = patch(body_rot(1,:),  body_rot(2,:),  'g');
+    % h.body  = patch(body_rot(1,:),  body_rot(2,:),  'g');
+    h.body  = patch(body_rot(1,:),  body_rot(2,:),  'y');
     h.left  = patch(left_rot(1,:),  left_rot(2,:),  'b');
     h.right = patch(right_rot(1,:), right_rot(2,:), 'b');
 else

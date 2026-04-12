@@ -15,11 +15,11 @@ n = sqrt(mu/Re^3);
 % t_phase = [0.8*2000, 1500, 1000, 500];
 
 P0 = [-2000; -5000; 0];
-P1 = [-0;  -2000;  0];
-P2 = [-0;  -500;  0];
+P1 = [-0;  -3000;  0];
+P2 = [-0;  -300;  0];
 P3 = [-0;   1;   0];
 Pf = [0; 0; 0];
-t_phase = [0.8*2000, 1500, 1000, 500];
+t_phase = [0.6*2000, 1500, 1000, 500];
 
 waypoints = {P0, P1, P2, P3, Pf};
 
@@ -73,13 +73,17 @@ x = traj(:,1);
 y = traj(:,2);
 
 %% --- Animation ---
-figure;
+fig = figure;
+set(fig, 'Position', [100 100 520 1080]);
+
 hold on; grid on;
 axis equal;
 
-xlabel('R-bar [m]');
-ylabel('V-bar [m]');
-title('Impulsive Rendezvous Animation (Box-Wing Satellite)');
+xlabel('Radial, m');
+ylabel('Along-Track, m');
+% xlabel('R-bar [m]');
+% ylabel('V-bar [m]');
+% title('Impulsive Rendezvous Animation (Box-Wing Satellite)');
 
 % Target (circle)
 theta = linspace(0,2*pi,100);
@@ -97,7 +101,7 @@ ylim([min(y)-200 max(y)+200]);
 body_size = 140;
 % Solar panels (rectangles)
 panel_length = 180;
-panel_width  = 120;
+panel_width  = 90;
 params.BodySize    = body_size;
 params.PanelLength = panel_length;
 params.PanelWidth  = panel_width;
@@ -106,11 +110,16 @@ params.PanelWidth  = panel_width;
 % phase_text = text(0.05,0.95,'','Units','normalized');
 
 %% --- Animation loop ---
-v = VideoWriter('rendezvous.mp4','MPEG-4');
+% v = VideoWriter('rendezvous.mp4','MPEG-4');
+% open(v);
+% v = VideoWriter('rendezvous.avi','MPEG-4');
+v = VideoWriter('rendezvous.avi','Motion JPEG AVI');
+v.FrameRate = 20;   % Set to 20 frames per second
+v.Quality = 100;
 open(v);
 alignVel = false;
 % alignVel = true;
-for k = 1:10:length(x)
+for k = 1:1:length(x)
 
     % Current position
     xc = x(k);
@@ -132,16 +141,13 @@ for k = 1:10:length(x)
     else
         h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params, h_sat);
     end
-
+    % set(gca, 'Position', [0.03 0.03 1.0 1]); % Fill entire figure
     drawnow;
-    pause(0.1);
+    % pause(0.1);
     writeVideo(v, getframe(gcf));
 end
 
 close(v);
-disp('Docking complete.');
-
-
 disp('Docking complete.');
 
 function [Phi_rr, Phi_rv, Phi_vr, Phi_vv] = cw_stm(n, t)
