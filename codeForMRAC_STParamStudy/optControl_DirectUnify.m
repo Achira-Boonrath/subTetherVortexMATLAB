@@ -8,6 +8,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     %  System:
     %  1) 'pendulum'      - Simple Inverted Pendulum
     %  2) 'cartpole'      - Cart-Pole
+    %  3) 'ejection'      - Restore Ejection
     %
     %  enforced_term_states: Array of state indices to strictly enforce at the final time.
     %  cost_choice: 'effort' or 'time'. Setting 'time' makes the final time T an optimization variable.
@@ -112,8 +113,41 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         R_u = 1;
         Qf = (1e-9)*diag([50, 20, 200, 20]); % Penalize position, velocity, angle, angular velocity
         
+    elseif strcmp(system_choice, 'ejection')
+        m_net05 = 0.5458517235612266/2; % Half of net mass
+        numMU  = 2;
+        
+        % Length parameter
+        % Mass H
+        % Mass P
+        % Force parameter
+        sys_params.l_0 = 28.28427125;              
+        % sys_params.m_H = 0.5 + m_net05;  
+        sys_params.m_H = 3 + m_net05;   
+        sys_params.m_P = 7 + m_net05/2;            
+        sys_params.F_T = numMU.*22;                 
+        
+        nx = 4;  % states: [yH; yH_dot; psi; psi_dot]
+        nu = 1;  % control: phi
+        
+        xd0 = [0; 0; deg2rad(15); 0];
+        xf_des = [0; 0; pi/2; 0];
+        
+        u_min = 0;   
+        u_max = pi/2;    
+        
+        x_min = -inf;        x_max = inf;              
+        xdot_min = -inf;    xdot_max = inf;        
+        theta_min = -pi/2;  theta_max = pi/2;       
+        thetadot_min = -inf;  thetadot_max = inf;      
+        
+        lb_state = [x_min; xdot_min; theta_min; thetadot_min];
+        ub_state = [x_max; xdot_max; theta_max; thetadot_max];
+        
+        R_u = 1;
+        Qf = (1e-9)*diag([1e-3, 1e-3, 1e-3, 1e-3]);
     else
-        error('Unknown system_choice. Use ''pendulum'' or ''cartpole''.');
+        error('Unknown system_choice. Use ''pendulum'', ''cartpole'', or ''ejection''.');
     end
 
     % Set default enforced terminal states if not provided (enforce everything)
@@ -290,13 +324,13 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             ylabel('u piecewise (Nm)'); xlabel('time (s)'); grid on;
         end
         
-    else % cartpole plots
+    elseif strcmp(system_choice, 'cartpole') || strcmp(system_choice, 'ejection')
         subplot(3,2,1);
         plot(tgrid, X_opt(1,:), '-o', 'LineWidth', 1.2); hold on;
         if strcmp(method_choice, 'collocation')
             plot(tgrid_mid, Xm_opt(1,:), 'o', 'MarkerSize', 4);
         end
-        ylabel('x (m)'); grid on; title(sprintf('Cartpole (%s): Cart Position', method_choice));
+        ylabel('x (m)'); grid on; title(sprintf('%s (%s): Position', upper(system_choice), method_choice));
         
         subplot(3,2,3);
         plot(tgrid, X_opt(2,:), '-o', 'LineWidth', 1.2); hold on;
@@ -339,7 +373,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             xlim([-1.4*sys_params.l, 1.4*sys_params.l]); ylim([-1.4*sys_params.l, 1.4*sys_params.l]);
             title(sprintf('Pendulum: t=%.2f s, \\theta=%.2f rad', tgrid(k), wrapToPi(theta_val)));
             
-        else % cartpole
+        elseif strcmp(system_choice, 'cartpole')
             x_cart = X_opt(1,k);
             theta_val = X_opt(3,k);
             x_p = x_cart + sys_params.l * sin(theta_val);
@@ -360,6 +394,17 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             axis equal;
             xlim([-4, 4]); ylim([-2, 2]); % Adjust view boundaries logic depending on results
             title(sprintf('Cartpole: t=%.2f s, x=%.2f m, \\theta=%.2f rad', tgrid(k), x_cart, wrapToPi(theta_val)));
+        elseif strcmp(system_choice, 'ejection')
+            yH = X_opt(1,k);
+            psi = X_opt(3,k);
+            x_p = yH + sys_params.l_0 * sin(psi);
+            y_p = -sys_params.l_0 * cos(psi);
+            
+            % plot([yH x_p], [0 y_p], '-o', 'LineWidth', 2, 'MarkerSize', 8, 'Color', 'k'); hold on;
+            % plot([-50 50], [0 0], 'k-', 'LineWidth', 1); hold off;
+            % axis equal;
+            % xlim([-40, 40]); ylim([-40, 40]); 
+            % title(sprintf('Ejection: t=%.2f s, yH=%.2f m, \\psi=%.2f rad', tgrid(k), yH, psi));
         end
         drawnow;
     end
@@ -372,7 +417,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             theta_ddot = (u - sys_params.m * sys_params.g * sys_params.l * sin(theta_val)) / sys_params.I;
             xd = [theta_dot; theta_ddot];
             
-        else % cartpole
+        elseif strcmp(system_choice, 'cartpole') % cartpole
             % states: [x, x_dot, theta, theta_dot]
             theta_val = x(3);
             theta_dot = x(4);
@@ -397,11 +442,34 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             theta_ddot = accel(2);
             
             xd = [x(2); x_ddot; theta_dot; theta_ddot];
+            
+        elseif strcmp(system_choice, 'ejection')
+            phi = u; 
+            psi = x(3);       
+            psi_dot = x(4);  
+            
+            m_P = sys_params.m_P;
+            l_0 = sys_params.l_0;
+            F_T = sys_params.F_T;
+            m_H = sys_params.m_H;
+
+            A_eq = -2 .* m_P .* l_0 .* psi_dot.^2 .* cos(psi) - 2 .* F_T .* cos(phi);
+            B_eq = 2 .* F_T .* l_0 .* (sin(phi) .* cos(psi) - cos(phi) .* sin(psi));
+            common_den = l_0 .* (-2 .* m_P .* sin(psi).^2 + m_H + 2 .* m_P);
+            yH_ddot = - (B_eq .* sin(psi) - A_eq .* l_0)./ common_den;
+            psi_ddot = (B_eq .* m_H + 2 .* B_eq .* m_P - 2 .* A_eq .* l_0 .* m_P .* sin(psi))./ ...
+               (2 .* m_P .* l_0.* common_den);
+            
+            xd = [x(2); yH_ddot; psi_dot; psi_ddot];
         end
     end
 
     function a_wrapped = wrapToPi(ang)
-        a_wrapped = mod(ang + pi, 2*pi) - pi;
+        if strcmp(system_choice, 'ejection')
+            a_wrapped = ang;
+        else
+            a_wrapped = mod(ang + pi, 2*pi) - pi;
+        end
     end
 
     function xerr = get_xerr(xN)
@@ -441,7 +509,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         J_final = xerr' * Qf * xerr;
         
         if strcmp(cost_choice, 'time')
-            J = 10.0 * T_var;% + J_run ;%+ J_final; % min time heavily penalized
+            J = 1.0 * T_var;% + J_run ;%+ J_final; % min time heavily penalized
         else
             J = J_run ;%+ J_final;
         end
@@ -503,7 +571,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         J_final = xerr' * Qf * xerr;           
 
         if strcmp(cost_choice, 'time')
-            J = 10.0 * T_var; %+ J_run ;%+ J_final;
+            J = 1.0 * T_var; %+ J_run ;%+ J_final;
         else
             J = J_run ;%+ J_final;
         end
