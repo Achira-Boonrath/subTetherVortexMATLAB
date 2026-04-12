@@ -1,4 +1,4 @@
-function optControl_DirectUnify(method_choice, system_choice, enforced_term_states)
+function optControl_DirectUnify(method_choice, system_choice, enforced_term_states, cost_choice)
     % UNIFIED DIRECT OPTIMAL CONTROL
     % Solves the Optimal Control Problem (OCP) using either:
     %  Method:
@@ -10,6 +10,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     %  2) 'cartpole'      - Cart-Pole
     %
     %  enforced_term_states: Array of state indices to strictly enforce at the final time.
+    %  cost_choice: 'effort' or 'time'. Setting 'time' makes the final time T an optimization variable.
     %
     % Usage:
     %   optControl_DirectUnify('shooting', 'pendulum')
@@ -25,6 +26,9 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     if nargin < 3
         enforced_term_states = [];     % Flag for default initialization after nx is known
     end
+    if nargin < 4
+        cost_choice = 'effort';        % 'effort' or 'time'
+    end
     
     close all; clc;
     fprintf('=== Unified Optimal Control ===\n');
@@ -32,11 +36,17 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     fprintf('System: %s\n', upper(system_choice));
     
     %% Common Problem Setup
-    T = 2.0;         % total time (s)
-    N = 50;          % number of intervals
-    dt = T / N;
-    tgrid = linspace(0,T,N+1);
-    tgrid_mid = tgrid(1:end-1) + dt/2;
+    T_guess = 2.0;         % default time guess (s)
+    N = 40;                % number of intervals
+    
+    % Depending on cost_choice, T may vary:
+    if strcmp(cost_choice, 'time')
+        lb_T = 0.05;       % minimum physical time allowed
+        ub_T = 10.0;       % maximum physical time allowed
+    else
+        lb_T = T_guess;    % strictly fix time 
+        ub_T = T_guess;    
+    end
     
     %% System-specific settings
     if strcmp(system_choice, 'pendulum')
@@ -68,33 +78,39 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     elseif strcmp(system_choice, 'cartpole')
         % Cartpole parameters
         sys_params.M = 2.0; % cart mass (kg)
-        sys_params.m = 1.0; % pole mass (kg)
-        sys_params.l = 1.0; % pole length from cart to center of mass (m)
+        sys_params.m = 0.5; % pole mass (kg)
+        sys_params.l = 0.5; % pole length from cart to center of mass (m)
         sys_params.g = 9.81; % gravity (m/s^2)
         sys_params.I = sys_params.m * sys_params.l^2; % pole inertia
-        
+
+        dist = 0.8;  %How far must the cart translate during its swing-up
+        maxForce = 100;  %Maximum actuator forces
+                
         nx = 4;  % states: [x; x_dot; theta; theta_dot]
         nu = 1;  % control: cart linear force
         
         % Initial condition (pendulum down, at x=0)
         xd0 = [0; 0; 0; 0];
         % Desired final condition (upright, at x=0)
-        xf_des = [0; 0; pi; 0];
+        xf_des = [dist; 0; pi; 0];
         
         % Bounds
-        u_min = -50; u_max = 50; % higher force bounds for cartpole
-        
-        x_min = -10; x_max = 10;
-        xdot_min = -20; xdot_max = 20;
-        theta_min = -4*pi; theta_max = 4*pi;
-        thetadot_min = -50; thetadot_max = 50;
+        u_min = -maxForce; u_max = maxForce; % higher force bounds for cartpole
+
+        x_min = -2*dist; x_max = 2*dist;
+        xdot_min = -inf; xdot_max = inf;
+        theta_min = -2*pi; theta_max = 2*pi;
+        thetadot_min = -inf; thetadot_max = inf;
+        % xdot_min = -20; xdot_max = 20;
+        % theta_min = -4*pi; theta_max = 4*pi;
+        % thetadot_min = -50; thetadot_max = 50;
         
         lb_state = [x_min; xdot_min; theta_min; thetadot_min];
         ub_state = [x_max; xdot_max; theta_max; thetadot_max];
         
         % Cost weights
-        R_u = 1e-2;
-        Qf = diag([50, 20, 200, 20]); % Penalize position, velocity, angle, angular velocity
+        R_u = 1;
+        Qf = (1e-9)*diag([50, 20, 200, 20]); % Penalize position, velocity, angle, angular velocity
         
     else
         error('Unknown system_choice. Use ''pendulum'' or ''cartpole''.');
@@ -107,8 +123,9 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
 
     %% fmincon options
     % 'Algorithm','interior-point', ...
+            % 'Display','iter');
     options = optimoptions('fmincon', ...
-        'Algorithm','sqp', ...
+        'Algorithm','interior-point', ...
         'Display','iter', ...
         'MaxFunctionEvaluations', 5e5, ...
         'MaxIterations', 5000, ...
@@ -118,12 +135,12 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     %% Method Selection & Optimization Execution
     if strcmp(method_choice, 'shooting')
         % --- DIRECT SINGLE SHOOTING SETUP ---
-        % Decision variable: piecewise-constant control at N+1 knot points
         % (we use N intervals but include controls at both endpoints to allow
-        % simple reconstruction/plotting). z = U(1:N+1).
+        % simple reconstruction/plotting). z = [U(1:N+1); T_var].
         U0 = zeros(N+1,1);              % initial guess: zero torque/force
-        lb = u_min * ones(N+1,1);       % lower bound on each control knot
-        ub = u_max * ones(N+1,1);       % upper bound on each control knot
+        Z0 = [U0; T_guess];             % full decision variable
+        lb = [u_min * ones(N+1,1); lb_T]; % lower bound on each control knot + Time bounds
+        ub = [u_max * ones(N+1,1); ub_T]; % upper bound on each control knot + Time bounds
         
         % Solve with fmincon:
         % - objective computes integral cost by simulating forward with the
@@ -131,23 +148,27 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         % - nonlinear constraints enforce terminal state penalty or equality
         %   conditions as implemented in nonlcon_shooting
         tic;
-        [z_opt, J_opt, exitflag, output] = fmincon(@objFun_shooting, U0, [],[],[],[], lb, ub, @nonlcon_shooting, options);
+        [z_opt, J_opt, exitflag, output] = fmincon(@objFun_shooting, Z0, [],[],[],[], lb, ub, @nonlcon_shooting, options);
         toc;
         
         fprintf('Finished. exitflag=%d, final J=%.6f\n', exitflag, J_opt);
         
+        U_opt = z_opt(1:end-1)';  % store controls as a row vector for consistent plotting
+        T_opt = z_opt(end);
+        dt = T_opt / N;
+        tgrid = linspace(0, T_opt, N+1);
+        tgrid_mid = tgrid(1:end-1) + dt/2;
+
         % Reconstruct state trajectory from optimal control using numerical
         % integration (ode45) over each interval of length dt. This produces
-        % X_opt(:,k) for k=1..N+1 corresponding to knots t=0:dt:T.
+        % X_opt(:,k) for k=1..N+1 corresponding to knots t=0:dt:T_opt.
         X_opt = zeros(nx,N+1);
         X_opt(:,1) = xd0;
         for k = 1:N
-            u_k = z_opt(k);  % apply control assumed constant over interval [t_k, t_{k+1})
-            % Integrate dynamics from current state for one timestep
+            u_k = U_opt(k);  % apply optimal control 
             [~,xint] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_k), [0 dt], X_opt(:,k));
             X_opt(:,k+1) = xint(end,:)'; % take state at end of interval
         end
-        U_opt = z_opt';  % store controls as a row vector for consistent plotting
         Xm_opt = [];     % midpoints are not used in shooting approach
 
     elseif strcmp(method_choice, 'collocation')
@@ -177,13 +198,14 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         % - U0_colloc: zero control initial guess at knots
         U0_colloc = zeros(nu, N+1);
         
-        % Pack initial guess into column vector z0 consistent with indexing below
-        z0 = [X0(:); Xm0(:); U0_colloc(:)];
+        % Decision vector includes T_var at the very end
+        nz_total = nz + 1;
+        z0 = [X0(:); Xm0(:); U0_colloc(:); T_guess];
         
         % Prepare bounds for the full decision vector:
         % Default to unbounded and then assign meaningful bounds blockwise.
-        lb = -inf(nz,1);
-        ub =  inf(nz,1);
+        lb = -inf(nz_total,1);
+        ub =  inf(nz_total,1);
         
         % Knot state bounds: apply physical limits for each state at knots
         for k=1:N+1
@@ -205,6 +227,9 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             lb(idx_u) = u_min;
             ub(idx_u) = u_max;
         end
+        % Time bounds
+        lb(end) = lb_T;
+        ub(end) = ub_T;
         
         % Call fmincon with objective and nonlinear constraints tailored to
         % collocation. The objective integrates cost over the trajectory
@@ -216,11 +241,15 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         
         fprintf('Finished. exitflag=%d, final J=%.6f\n', exitflag, J_opt);
         
-        % Unpack the optimized decision vector into component arrays for
-        % plotting and analysis:
-        X_opt = reshape(z_opt(1:nX), nx, N+1);                     % knot states
-        Xm_opt = reshape(z_opt(nX+1:nX+nXm), nx, N);               % midpoint states
-        U_opt = reshape(z_opt(nX+nXm+1:end), nu, N+1);             % control at knots
+        % Unpack the optimized decision vector 
+        X_opt = reshape(z_opt(1:nX), nx, N+1);                     
+        Xm_opt = reshape(z_opt(nX+1:nX+nXm), nx, N);               
+        U_opt = reshape(z_opt(nX+nXm+1:end-1), nu, N+1);           
+        
+        T_opt = z_opt(end);
+        dt = T_opt / N;
+        tgrid = linspace(0, T_opt, N+1);
+        tgrid_mid = tgrid(1:end-1) + dt/2;
     else
         error('Unknown method_choice. Use ''shooting'' or ''collocation''.');
     end
@@ -388,27 +417,21 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     end
     
     %% ---------------- Single Shooting Nested Functions ----------------
-    function J = objFun_shooting(U)
-        % Objective function for single shooting method.
-        % Input:
-        %   U - vector of control inputs at each shooting interval (size N)
-        % Output:
-        %   J - scalar cost: running cost + terminal cost
-        %
-        % Running cost: integral of u^2 over time approximated by sum(U.^2)*dt,
-        % scaled by R_u. Terminal cost: quadratic penalty on final state error
-        % using weighting matrix Qf.
+    function J = objFun_shooting(Z)
+        U = Z(1:end-1);
+        T_var = Z(end);
+        dt_var = T_var / N;
         
         % Running cost (sum of squared controls over all intervals)
-        J_run = dt * sum(U.^2);
+        J_run = dt_var * sum(U.^2);
         J_run = R_u * J_run; 
 
         % Propagate system forward using piecewise-constant controls U
         x = xd0;  % initialize state at known initial condition
         for k_ss = 1:N
             u_ss = U(k_ss);                                
-            % Integrate system dynamics over one interval [0, dt] with control u_ss
-            [~, xint_ss] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt], x);
+            % Integrate system dynamics over one interval [0, dt_var] with control u_ss
+            [~, xint_ss] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             % Take the state at the end of the interval as the next initial state
             x = xint_ss(end, :)';                          
         end
@@ -417,26 +440,23 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         xerr = get_xerr(x);
         J_final = xerr' * Qf * xerr;
         
-        % Total cost
-        J = J_run + J_final;
+        if strcmp(cost_choice, 'time')
+            J = 10.0 * T_var;% + J_run ;%+ J_final; % min time heavily penalized
+        else
+            J = J_run ;%+ J_final;
+        end
     end
 
-    function [c, ceq] = nonlcon_shooting(U)
-        % Nonlinear constraints for single shooting.
-        % Ensures that the state reached after applying U matches the desired
-        % final state xf_des. No inequality constraints (c = []).
-        %
-        % Input:
-        %   U - vector of control inputs (size N)
-        % Outputs:
-        %   c   - inequality constraints (empty)
-        %   ceq - equality constraints (state at final time - xf_des)
+    function [c, ceq] = nonlcon_shooting(Z)
+        U = Z(1:end-1);
+        T_var = Z(end);
+        dt_var = T_var / N;
         
         % Propagate state forward using the control sequence U
         x = xd0;
         for k_ss = 1:N
             u_ss = U(k_ss);
-            [~, xint_ss] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt], x);
+            [~, xint_ss] = ode45(@(t_ode,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             x = xint_ss(end, :)';
         end
         
@@ -458,11 +478,14 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         %       plus terminal cost on final state.
         %
         % Running cost approximation uses Simpson-like (3-point) rule per interval:
-        % (dt/6)*(u_k^2 + 4*u_mid^2 + u_{k+1}^2) summed over intervals, scaled by R_u.
+        % (dt_var/6)*(u_k^2 + 4*u_mid^2 + u_{k+1}^2) summed over intervals, scaled by R_u.
         
         % Extract variables from optimization vector
         X_coll = reshape(z(1:nX), nx, N+1);                     
-        U_coll = reshape(z(nX+nXm+1:end), nu, N+1);             
+        U_coll = reshape(z(nX+nXm+1:end-1), nu, N+1);             
+        
+        T_var = z(end);
+        dt_var = T_var / N;
 
         % Numerical quadrature of control effort over all intervals
         J_run = 0;
@@ -470,7 +493,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             uk  = U_coll(:,kk);        
             uk1 = U_coll(:,kk+1);      
             um_coll  = 0.5*(uk + uk1); % midpoint control (for Simpson-like rule)
-            J_run = J_run + (dt/6)*(uk'*uk + 4*(um_coll'*um_coll) + uk1'*uk1);
+            J_run = J_run + (dt_var/6)*(uk'*uk + 4*(um_coll'*um_coll) + uk1'*uk1);
         end
         J_run = R_u * J_run; 
 
@@ -479,8 +502,11 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         xerr = get_xerr(xN);           
         J_final = xerr' * Qf * xerr;           
 
-        % Total cost
-        J = J_run + J_final;
+        if strcmp(cost_choice, 'time')
+            J = 10.0 * T_var; %+ J_run ;%+ J_final;
+        else
+            J = J_run ;%+ J_final;
+        end
     end
     
     function [c, ceq] = nonlcon_collocation(z)
@@ -493,14 +519,17 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         % Outputs:
         %   c   - inequality constraints (empty)
         %   ceq - equality constraints stacking:
-        %         - midpoint consistency: Xm - 0.5*(Xk + Xk+1) - (dt/8)*(fk - fk1) = 0
-        %         - defect (integration) constraint: Xk+1 - Xk - (dt/6)*(fk + 4*fm + fk1) = 0
+        %         - midpoint consistency: Xm - 0.5*(Xk + Xk+1) - (dt_var/8)*(fk - fk1) = 0
+        %         - defect (integration) constraint: Xk+1 - Xk - (dt_var/6)*(fk + 4*fm + fk1) = 0
         %         - initial condition constraint: X(:,1) - xd0 = 0
         
         % Unpack optimization vector into state/node and control variables
         X_coll = reshape(z(1:nX), nx, N+1);                     
         Xm_coll = reshape(z(nX+1:nX+nXm), nx, N);               
-        U_coll = reshape(z(nX+nXm+1:end), nu, N+1);             
+        U_coll = reshape(z(nX+nXm+1:end-1), nu, N+1);             
+        
+        T_var = z(end);
+        dt_var = T_var / N;
 
         % Preallocate equality constraint vector:
         % For each interval we have nx midpoint constraints and nx defect constraints,
@@ -525,15 +554,15 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             fm_c  = system_dynamics(xm_c,  um_c);   
 
             % Midpoint consistency constraint:
-            % xm = 0.5*(xk + xk1) + (dt/8)*(fk - fk1)
-            % Rearranged to standard form: xm - 0.5*(xk + xk1) - (dt/8)*(fk - fk1) = 0
-            mid_cons = xm_c - 0.5*(xk + xk1) - (dt/8)*(fk - fk1);
+            % xm = 0.5*(xk + xk1) + (dt_var/8)*(fk - fk1)
+            % Rearranged to standard form: xm - 0.5*(xk + xk1) - (dt_var/8)*(fk - fk1) = 0
+            mid_cons = xm_c - 0.5*(xk + xk1) - (dt_var/8)*(fk - fk1);
             ceq(cnt + (1:nx)) = mid_cons;
             cnt = cnt + nx;
 
             % Defect constraint (Simpson / Hermite collocation style):
-            % xk+1 - xk - (dt/6)*(fk + 4*fm + fk1) = 0
-            defect = xk1 - xk - (dt/6)*(fk + 4*fm_c + fk1);
+            % xk+1 - xk - (dt_var/6)*(fk + 4*fm + fk1) = 0
+            defect = xk1 - xk - (dt_var/6)*(fk + 4*fm_c + fk1);
             ceq(cnt + (1:nx)) = defect;
             cnt = cnt + nx;
         end
