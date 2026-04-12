@@ -186,78 +186,154 @@ function inverted_pendulum_HS_collocation_fixed
     
     %% ---------------- Nested functions ----------------
     
-        function J = obj(z)
+    function J = obj(z)
             % COST FUNCTION
-            % We want to minimize J = Integral( u(t)^2 * R ) + FinalErrorPenalty
+            % Computes the total objective J for the optimal control problem.
             %
-            % Since we have discretized u(t), we approximate the integral using
-            % Simpson's Rule for higher accuracy than a simple Riemann sum.
-            % Integral ~ (dt/6) * (u_k^2 + 4*u_mid^2 + u_{k+1}^2)
+            % Structure:
+            %   J = RunningCost + TerminalCost
+            %
+            % RunningCost:
+            %   Approximates the integral over time of (u' * R_u * u) using
+            %   Simpson's rule on each interval. Simpson's rule is used because
+            %   it attains higher accuracy (3rd order) compared to simple
+            %   trapezoidal or rectangular approximations. For each interval k:
+            %       Integral_k u^2 dt  ≈ (dt/6)*(u_k^2 + 4*u_mid^2 + u_{k+1}^2)
+            %   Here u_mid is approximated by the average (u_k + u_{k+1})/2.
+            %
+            % TerminalCost:
+            %   A quadratic penalty on the final state error (terminal
+            %   constraint softening). The angle error is wrapped to [-pi,pi]
+            %   before forming the error vector so that the optimizer treats e.g.
+            %   pi+eps and -pi+eps as near-identical orientations.
+            %
+            % Inputs:
+            %   z : decision vector containing flattened knot states X,
+            %       midpoint states Xm, and knot controls U:
+            %       z = [X_knots(:); X_mid(:); U_knots(:)]
+            %
+            % Outputs:
+            %   J : scalar objective value
+            %
+            % Notes:
+            %   - This nested function uses variables from the parent scope:
+            %     nX, nXm, N, dt, R_u, Qf, xf_des, nx, nu
+            %   - R_u is treated as a scalar weight multiplying u^2.
     
-            % Objective uses variables from parent scope: nX, nXm, N, dt, R_u, Qf, xf_des
-            X = reshape(z(1:nX), nx, N+1);
-            Xm = reshape(z(nX+1:nX+nXm), nx, N);
-            U = reshape(z(nX+nXm+1:end), nu, N+1);
-            % Simpson integrate u^2 over each interval
+            % Unpack the decision vector into meaningful blocks:
+            X = reshape(z(1:nX), nx, N+1);                     % knot states
+            Xm = reshape(z(nX+1:nX+nXm), nx, N);               % mid-interval states
+            U = reshape(z(nX+nXm+1:end), nu, N+1);             % knot controls
+    
+            % Compute running cost via Simpson integration over each interval.
             J_run = 0;
             for kk = 1:N
-                uk = U(:,kk);
-                uk1 = U(:,kk+1);
-                um = 0.5*(uk + uk1);
+                uk  = U(:,kk);        % control at left knot of interval kk
+                uk1 = U(:,kk+1);      % control at right knot of interval kk
+                um  = 0.5*(uk + uk1); % approximate control at the midpoint
+                % (dt/6)*(u_k^2 + 4*u_mid^2 + u_{k+1}^2)
                 J_run = J_run + (dt/6)*(uk'*uk + 4*(um'*um) + uk1'*uk1);
             end
-            J_run = R_u * J_run;
-            % terminal penalty (angle wrapped)
+            J_run = R_u * J_run; % scale by control weight
+    
+            % Terminal penalty: penalize deviation from desired final state.
+            % For the angular component we wrap the angular difference to
+            % [-pi,pi] so the metric respects circular topology.
             xN = X(:,end);
-            ang_err = wrapToPi(xN(1) - xf_des(1));
-            xerr = [ang_err; xN(2)-xf_des(2)];
-            J_final = xerr' * Qf * xerr;
+            ang_err = wrapToPi(xN(1) - xf_des(1)); % wrapped angle error
+            xerr = [ang_err; xN(2)-xf_des(2)];     % combine with angular velocity error
+            J_final = xerr' * Qf * xerr;           % quadratic terminal cost
+    
+            % Total objective
             J = J_run + J_final;
         end
     
         function [c, ceq] = nonlcon(z)
-            % NON-LINEAR CONSTRAINTS
-            % This is where the physics are enforced.
-            % The solver must find X and U such that the spline interpolants
-            % match the system dynamics: x_dot = f(x,u).
+            % NONLINEAR CONSTRAINTS (equality-only)
+            %
+            % This function enforces the dynamics of the pendulum using the
+            % Hermite-Simpson collocation scheme. It returns:
+            %   c   - inequality constraints (empty here)
+            %   ceq - equality constraints (stacked)
+            %
+            % Equality constraints stacked in ceq (per interval kk):
+            %   1) Midpoint consistency (nx equations):
+            %        xm - 0.5*(xk + xk1) - (dt/8)*(f_k - f_k1) = 0
+            %      This enforces that the explicit midpoint state variable xm
+            %      matches the Hermite interpolation constructed from the
+            %      endpoint states and their derivatives.
+            %
+            %   2) Hermite-Simpson defect (nx equations):
+            %        xk1 - xk - (dt/6)*(f_k + 4*f_m + f_k1) = 0
+            %      This enforces that the integral of dynamics over the interval
+            %      (approximated by Simpson's rule) equals the state increment.
+            %
+            % After looping intervals, we also enforce the initial condition:
+            %   X(:,1) - xd0 = 0
+            %
+            % Inputs:
+            %   z - decision vector (same layout as in obj)
+            %
+            % Outputs:
+            %   c   - empty (no inequalities)
+            %   ceq - column vector with all equality constraints
     
-            X = reshape(z(1:nX), nx, N+1);
-            Xm = reshape(z(nX+1:nX+nXm), nx, N);
-            U = reshape(z(nX+nXm+1:end), nu, N+1);
+            % Unpack decision vector
+            X = reshape(z(1:nX), nx, N+1);                     % knot states
+            Xm = reshape(z(nX+1:nX+nXm), nx, N);               % mid-interval states
+            U = reshape(z(nX+nXm+1:end), nu, N+1);             % knot controls
+    
+            % Preallocate ceq: for each interval we have 2*nx constraints,
+            % plus nx constraints for the initial condition.
             ceq = zeros(nx*(2*N) + nx, 1);
             cnt = 0;
+    
+            % Loop over intervals and assemble constraints
             for kk = 1:N
-                xk = X(:,kk);
-                xk1 = X(:,kk+1);
-                xm = Xm(:,kk);
-                uk = U(:,kk);
-                uk1 = U(:,kk+1);
-                um = 0.5*(uk + uk1);
-                fk = pendulum_dynamics(xk, uk);
-                fk1 = pendulum_dynamics(xk1, uk1);
-                fm = pendulum_dynamics(xm, um);
-                % 1. Midpoint Consistency Constraint:
-                %    Value at midpoint x_m must match the Hermite interpolation
-                %    from x_k and x_{k+1} using derivatives f_k and f_{k+1}.
-                %    x_m = 0.5*(x_k + x_{k+1}) + (dt/8)*(f_k - f_{k+1})
+                xk  = X(:,kk);        % state at left knot
+                xk1 = X(:,kk+1);      % state at right knot
+                xm  = Xm(:,kk);       % explicit midpoint state variable
+                uk  = U(:,kk);        % control at left knot
+                uk1 = U(:,kk+1);      % control at right knot
+                um  = 0.5*(uk + uk1); % midpoint control approximation
+    
+                % Evaluate dynamics at the three points
+                fk  = pendulum_dynamics(xk,  uk);   % f(x_k, u_k)
+                fk1 = pendulum_dynamics(xk1, uk1);  % f(x_{k+1}, u_{k+1})
+                fm  = pendulum_dynamics(xm,  um);   % f(x_m, u_m)
+    
+                % 1) Midpoint consistency: xm - HermiteInterp(xk,xk1,fk,fk1) = 0
+                % Hermite interpolation formula used:
+                % xm = 0.5*(xk + xk1) + (dt/8)*(fk - fk1)
                 mid_cons = xm - 0.5*(xk + xk1) - (dt/8)*(fk - fk1);
                 ceq(cnt + (1:nx)) = mid_cons;
                 cnt = cnt + nx;
     
-                % 2. Hermite-Simpson Defect Constraint:
-                %    The change in state x_{k+1} - x_k must match the integral
-                %    of the dynamics, approximated by Simpson's rule.
-                %    x_{k+1} - x_k = (dt/6) * (f_k + 4*f_{mid} + f_{k+1})
+                % 2) Hermite-Simpson defect (integral consistency):
+                % x_{k+1} - x_k = (dt/6) * (f_k + 4*f_m + f_{k+1})
                 defect = xk1 - xk - (dt/6)*(fk + 4*fm + fk1);
                 ceq(cnt + (1:nx)) = defect;
                 cnt = cnt + nx;
             end
-            % initial state equality
+    
+            % Initial state equality constraint: enforce exact initial condition
             ceq(cnt + (1:nx)) = X(:,1) - xd0;
+    
+            % No inequality constraints in this formulation
             c = [];
         end
     
         function xd = pendulum_dynamics(x,u)
+            % Continuous-time dynamics of the simple pendulum with torque input.
+            %
+            % State x = [theta; theta_dot]
+            % Control u = torque (Nm)
+            %
+            % Equations:
+            %   theta_dot = omega
+            %   omega_dot = (u - m*g*l*sin(theta)) / I
+            %
+            % Returns xd = [theta_dot; omega_dot]
             theta = x(1);
             theta_dot = x(2);
             theta_ddot = (u - m*g*l*sin(theta)) / I;
@@ -265,6 +341,9 @@ function inverted_pendulum_HS_collocation_fixed
         end
     
         function a_wrapped = wrapToPi(x)
+            % Wrap angles to the interval [-pi, pi)
+            % This helper ensures angular errors are measured along the
+            % shortest circular distance.
             a_wrapped = mod(x + pi, 2*pi) - pi;
         end
 
