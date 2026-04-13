@@ -6,13 +6,15 @@
 % orbitArgPeriapsis1 = -150; % final orbit argument of periapsis (degrees)
 % orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
 
-% % drag showcase
-% orbitSemiMajorAxis1 = 7500; %km
-% orbitEccentricity1 = 0.06; % final orbit eccentricity
-% orbitSemiMajorAxis0 = 8000; %km
-% orbitEccentricity0 = 0.0001; % initial orbit eccentricity
-% orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
-% orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+% drag showcase
+orbitSemiMajorAxis1 = 7500; %km
+orbitEccentricity1 = 0.06; % final orbit eccentricity
+orbitSemiMajorAxis0 = 8000; %km
+orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+satellitePlotStyle = 'boxwing';
+showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 
 % eject showcase - debris
 % orbitSemiMajorAxis1 = 7300; %km
@@ -23,14 +25,25 @@
 % orbitArgPeriapsis0 = -160.00001; % initial orbit argument of periapsis (degrees)
 % satellitePlotStyle = 'square';
 
-% eject showcase - RESTORE
-orbitSemiMajorAxis1 = 7500; %km
-orbitEccentricity1 = 0.06; % final orbit eccentricity
-orbitSemiMajorAxis0 = 7500; %km
-orbitEccentricity0 = 0.06; % initial orbit eccentricity
-orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
-orbitArgPeriapsis0 = -160.00001; % initial orbit argument of periapsis (degrees)
+% % eject showcase - RESTORE
+% orbitSemiMajorAxis1 = 7500; %km
+% orbitEccentricity1 = 0.06; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 7500; %km
+% orbitEccentricity0 = 0.06; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = -160.00001; % initial orbit argument of periapsis (degrees)
+% satellitePlotStyle = 'boxwing';
+
+% % reboost showcase - RESTORE
+orbitSemiMajorAxis1 = 8000; %km
+orbitEccentricity1 = 0.0001; % final orbit eccentricity
+orbitSemiMajorAxis0 = 7500 ; %km
+orbitEccentricity0 = 0.06 ; % initial orbit eccentricity
+orbitArgPeriapsis1 = 210; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis0 = 200; % initial orbit argument of periapsis (degrees)
 satellitePlotStyle = 'boxwing';
+
+%%
 
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 
@@ -58,14 +71,23 @@ rf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1)
 figure;
 set(gcf, 'Color', 'w');
 set(gcf, 'Position',  [0, 0, 1080, 1080]*0.8)
-hold on; axis equal; grid on;
+hold on; axis equal;
+
+if exist('showAxesAndGrid', 'var') && showAxesAndGrid
+    grid on;
+    xlabel('x (m)'); ylabel('y (m)');
+else
+    set(gca, 'XTick', [], 'YTick', []);
+    grid off;
+    xlabel(''); ylabel('');
+end
+
 % Circle parameters
 h = 0; % x-coordinate of center
 k = 0; % y-coordinate of center
 
 % Implicit equation: (x-h)^(2) + (y-k)^(2) - r^(2) = 0
 
-xlabel('x (m)'); ylabel('y (m)');
 title('Satellite Maneuvering Animation');
 
 % Set axis limits with some padding
