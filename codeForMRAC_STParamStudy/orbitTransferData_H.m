@@ -1,7 +1,7 @@
-function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg)
+function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg, omega_0_deg)
     close all; 
 %% ORBITTRANSFERDATA_H  Generates data for orbital transfer simulations.
-%   [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg)
+%   [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, omega_f_deg, omega_0_deg)
 % 
 %   Inputs:
 %       af          - Final orbit semi-major axis (km)
@@ -10,6 +10,7 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
 %       a0          - Initial orbit semi-major axis (km)
 %       e0          - Initial orbit eccentricity
 %       omega_f_deg - Final orbit argument of periapsis in degrees
+%       omega_0_deg - Initial orbit argument of periapsis in degrees
 %
 %   Outputs:
 %       t           - Time vector spanning the init, transfer, and final phases
@@ -21,6 +22,10 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     muVal = 398600; % Earth's gravitational parameter (km^3/s^2)
     theta_f = deg2rad(theta_f_deg); % Convert target true anomaly to radians
     omega_f = deg2rad(omega_f_deg); % Convert target argument of periapsis to radians
+    if nargin < 7
+        omega_0_deg = 0;
+    end
+    omega_0 = deg2rad(omega_0_deg); % Convert initial argument of periapsis to radians
     
     %% Compute Initial State (Initial Orbit at Periapsis)
     % Compute the parameter (p0) and radius at periapsis (r0) of the initial orbit
@@ -31,8 +36,13 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     v_scale_0 = sqrt(muVal / p0);
     v0_mag = v_scale_0 * (e0 + 1);
     
+    r0_x = r0 * cos(omega_0);
+    r0_y = r0 * sin(omega_0);
+    v0_x = -v0_mag * sin(omega_0);
+    v0_y = v0_mag * cos(omega_0);
+    
     % Initial state vector format: [x, y, z, vx, vy, vz, mass]
-    x0 = [r0 0 0 0 v0_mag 0 1000]';           
+    x0 = [r0_x r0_y 0 v0_x v0_y 0 1000]';           
     
     et = ef; % Target eccentricity
     % Compute the radius magnitude of the target point at theta_f
@@ -51,10 +61,11 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     % else
     %     tf = period*(theta_f/(2*pi)); % Wait time defined by angular separation
     % end
-    if abs(omega_f) < 1e-4
+    omega_diff = omega_f - omega_0;
+    if abs(omega_diff) < 1e-4
         tf = period * 0.5; % Hohmann transfer baseline time (half period)
     else
-        tf = period* ( 0.5 + 1.01*(omega_f/(2*pi)) ); % Wait time defined by angular separation
+        tf = period* ( 0.5 + 1.01*((omega_diff)/(2*pi)) ); % Wait time defined by angular separation
     end
     
     %% Optimization & ODE Boundary Values
@@ -68,7 +79,7 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     % Compute required parameters for Hohmann transfer intersecting r_mag
     p_trans = 2 * r0 * r_mag / (r0 + r_mag);
     v_trans = sqrt(muVal * p_trans) / r0;
-    x0(4:6) = [0; v_trans; 0]; % Overwrite initial velocity with transfer velocity
+    x0(4:6) = [-v_trans*sin(omega_0); v_trans*cos(omega_0); 0]; % Overwrite initial velocity with transfer velocity
 
     muEarth = muVal;
     
@@ -95,13 +106,13 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     
     % 1. Simulate the steady initial orbit (unpowered) over its orbital period
     periodInit = 2*pi*sqrt( (a0^3) /muVal  );
-    z0Init = [1e-8*lambda0_guess; [r0 0 0 0 v0_mag 0 1000]'];
+    z0Init = [1e-8*lambda0_guess; [r0_x r0_y 0 v0_x v0_y 0 1000]'];
     timeFinalInit = linspace(0, periodInit, 300);
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
 
     % 2. Simulate the transfer orbit using the computed Hohmann injection velocity
     minEctrl = false;
-    if abs(omega_f) < 1e-4
+    if abs(omega_diff) < 1e-4
     [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
     else
     % [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);

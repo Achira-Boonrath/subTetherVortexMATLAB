@@ -1,8 +1,36 @@
-orbitSemiMajorAxis1 = 40700; %km
-orbitEccentricity1 = 0.52; % final orbit eccentricity
-orbitSemiMajorAxis0 = 8100; %km
-orbitEccentricity0 = 0.31; % initial orbit eccentricity
-orbitArgPeriapsis1 = 40; % final orbit argument of periapsis (degrees)
+% Good for deorbiting show
+% orbitSemiMajorAxis1 = 6900; %km
+% orbitEccentricity1 = 0.1; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 8100; %km
+% orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -150; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+
+% % drag showcase
+% orbitSemiMajorAxis1 = 7500; %km
+% orbitEccentricity1 = 0.06; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 8000; %km
+% orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+
+% eject showcase - debris
+% orbitSemiMajorAxis1 = 7300; %km
+% orbitEccentricity1 = 0.085; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 7500; %km
+% orbitEccentricity0 = 0.06; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = -160.00001; % initial orbit argument of periapsis (degrees)
+% satellitePlotStyle = 'square';
+
+% eject showcase - RESTORE
+orbitSemiMajorAxis1 = 7500; %km
+orbitEccentricity1 = 0.06; % final orbit eccentricity
+orbitSemiMajorAxis0 = 7500; %km
+orbitEccentricity0 = 0.06; % initial orbit eccentricity
+orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis0 = -160.00001; % initial orbit argument of periapsis (degrees)
+satellitePlotStyle = 'boxwing';
 
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 
@@ -10,13 +38,18 @@ orbitTrueAnamoly = 180;
 r0 = orbitSemiMajorAxis0 * (1 - orbitEccentricity0^2) / (1 + orbitEccentricity0); % initial periapsis
 orbitSemiMajorAxis = (orbitSemiMajorAxis1 + orbitSemiMajorAxis0)/2;
 
-[t, x, lambda, u] = orbitTransferData_H(orbitSemiMajorAxis1, orbitEccentricity1, orbitTrueAnamoly, orbitSemiMajorAxis0, orbitEccentricity0, orbitArgPeriapsis1);
+[t, x, lambda, u] = orbitTransferData_H(orbitSemiMajorAxis1, orbitEccentricity1, orbitTrueAnamoly, orbitSemiMajorAxis0, orbitEccentricity0, orbitArgPeriapsis1, orbitArgPeriapsis0);
 
 %% Problem data
 muVal = 398600;
 % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 v0_mag = sqrt(muVal / (orbitSemiMajorAxis0 * (1 - orbitEccentricity0^2))) * (orbitEccentricity0 + 1);
-x0 = [r0 0 0 0 v0_mag 0 2000]';           
+omega_0 = deg2rad(orbitArgPeriapsis0);
+r0_x = r0 * cos(omega_0);
+r0_y = r0 * sin(omega_0);
+v0_x = -v0_mag * sin(omega_0);
+v0_y = v0_mag * cos(omega_0);
+x0 = [r0_x r0_y 0 v0_x v0_y 0 2000]';           
 
 theta_f = deg2rad(orbitTrueAnamoly);
 % Radius magnitude at periapsis of final orbit
@@ -24,7 +57,7 @@ rf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1)
 
 figure;
 set(gcf, 'Color', 'w');
-set(gcf, 'Position',  [0, 0, 1080, 1080]*0.7)
+set(gcf, 'Position',  [0, 0, 1080, 1080]*0.8)
 hold on; axis equal; grid on;
 % Circle parameters
 h = 0; % x-coordinate of center
@@ -72,7 +105,8 @@ dy = y_max - y_min; if dy==0, dy=1; end
     th = linspace(0, 2*pi, 100);
     p0 = orbitSemiMajorAxis0 * (1 - orbitEccentricity0^2);
     r0_orbit = p0 ./ (1 + orbitEccentricity0 * cos(th));
-    hInit = plot(r0_orbit .* cos(th), r0_orbit .* sin(th), 'k--', 'DisplayName', 'Initial Orbit');
+    omega_0_plot = deg2rad(orbitArgPeriapsis0);
+    hInit = plot(r0_orbit .* cos(th + omega_0_plot), r0_orbit .* sin(th + omega_0_plot), 'k--', 'DisplayName', 'Initial Orbit');
     
     omega_f = deg2rad(orbitArgPeriapsis1);
     pf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2);
@@ -83,7 +117,7 @@ dy = y_max - y_min; if dy==0, dy=1; end
     r_target = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1 * cos(theta_f));
     target_x = r_target * cos(theta_f + omega_f);
     target_y = r_target * sin(theta_f + omega_f);
-    hTarget = plot(target_x, target_y, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target Point');
+    % hTarget = plot(target_x, target_y, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target Point');
    
     % Create animated line for trajectory and marker for satellite
     hTraj = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Transfer Trajectory');
@@ -92,10 +126,10 @@ dy = y_max - y_min; if dy==0, dy=1; end
     hSatProxy = patch(NaN, NaN, 'g', 'EdgeColor', 'k', 'DisplayName', 'Satellite');
 
     % % Main body (square)
-    body_size = 1340;
+    body_size = 2*134;
     % Solar panels (rectangles)
-    panel_length = 1480;
-    panel_width  = 1220;
+    panel_length = 2*148;
+    panel_width  = 2*122;
     params.BodySize    = body_size;
     params.PanelLength = panel_length;
     params.PanelWidth  = panel_width;
@@ -106,20 +140,35 @@ dy = y_max - y_min; if dy==0, dy=1; end
     if avg_span == 0, avg_span = 1; end
 
     % Define explicit legend
-    lgd = legend([hInit, hFinal, hTarget, hTraj, hSatProxy], 'Location', 'best');
-    set(lgd, 'AutoUpdate', 'off');
+    % lgd = legend([hInit, hFinal, hTarget, hTraj, hSatProxy], 'Location', 'best');
+    % set(lgd, 'AutoUpdate', 'off');
    
     % Setup Video Writer
-    videoFilename = 'satellite_maneuver.mp4';
-    vWriter = VideoWriter(videoFilename, 'MPEG-4');
-    vWriter.FrameRate = 20; % Adjust frame rate as needed
-    % open(vWriter);
+    % videoFilename = 'satellite_maneuver.avi';
+    % vWriter = VideoWriter(videoFilename);
+    % vWriter.FrameRate = 20; % Adjust frame rate as needed
+
+    % videoFilename = VideoWriter('satellite_maneuver.avi','Motion JPEG AVI');
+    vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
+    vWriter.FrameRate = 20;   % Set to 20 frames per second
+    vWriter.Quality = 100;
+    open(vWriter);
    
+    % Allow user to choose satellite plotting style:
+    % 'boxwing' -> use draw_boxwing_satellite (existing behavior)
+    % 'square'  -> draw a simple green square (patch) at satellite location
+    % Set default style here; user can change before running animation
+    if ~exist('satellitePlotStyle', 'var') || isempty(satellitePlotStyle)
+        satellitePlotStyle = 'boxwing'; % options: 'boxwing' or 'square'
+    end
+
     % Loop through time steps to animate
     % Depending on the number of steps in 't', we might want to skip frames to keep video short
     nSteps = length(t);
     frameStep = max(1, floor(nSteps / 200)); % Target approx 300 frames max (~10s at 30fps)
    
+    % Precreate graphics handle for square option to reuse
+    h_square = [];
     for k = 1:frameStep:nSteps
         xlim([x_min - 0.35*dx, x_max + 0.35*dx]);
         ylim([y_min - 0.35*dy, y_max + 0.35*dy]);
@@ -127,15 +176,43 @@ dy = y_max - y_min; if dy==0, dy=1; end
         xc = x(k, 1);
         yc = x(k, 2);
         theta_rot = atan2(x(k, 5), x(k, 4)) + pi/2; % align with velocity
-        % theta_rot = atan2(x(k, 4), x(k, 5)); % align with velocity
 
-        % Draw/update satellite
-        if k == 1
-            h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params);
-        else
-            h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params, h_sat);
+        % Draw/update satellite according to selected style
+        switch lower(satellitePlotStyle)
+            case 'square'
+                % Square size scaled relative to orbital span for visibility
+                sq_half = max(0.0015*avg_span, body_size*0.5);
+                % Define rotated square corners
+                R = [cos(theta_rot), -sin(theta_rot); sin(theta_rot), cos(theta_rot)];
+                corners = sq_half * [-1 -1; 1 -1; 1 1; -1 1]';
+                rotated = R * corners;
+                verts_x = rotated(1, :) + xc;
+                verts_y = rotated(2, :) + yc;
+                if k == 1
+                    h_square = patch(verts_x, verts_y, 'g', 'EdgeColor', 'k', 'FaceAlpha', 1, 'DisplayName', 'Satellite');
+                else
+                    set(h_square, 'XData', verts_x, 'YData', verts_y);
+                end
+
+            otherwise % 'boxwing' and any other values default to boxwing
+                if k == 1
+                    h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params);
+                    % If previously created square handle exists, delete it
+                    if ~isempty(h_square) && isgraphics(h_square)
+                        delete(h_square);
+                        h_square = [];
+                    end
+                else
+                    h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params, h_sat);
+                end
         end
+
         drawnow;
+        
+        frame = getframe(gcf);
+        writeVideo(vWriter, frame);
    
         axis equal;
     end
+    
+    close(vWriter);
