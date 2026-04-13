@@ -131,14 +131,15 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         nu = 1;  % control: phi
         
         xd0 = [0; 0; deg2rad(15); 0];
-        xf_des = [0; 0; pi/2; 0];
+        % xf_des = [0; 0; pi/2; 0];
+        xf_des = [0; -36; pi/2; 0];
         
         u_min = 0;   
         u_max = pi/2;    
         
         x_min = -inf;        x_max = inf;              
         xdot_min = -inf;    xdot_max = inf;        
-        theta_min = -pi/2;  theta_max = pi/2;       
+        theta_min = 0;  theta_max = pi/2;       
         thetadot_min = -inf;  thetadot_max = inf;      
         
         lb_state = [x_min; xdot_min; theta_min; thetadot_min];
@@ -161,7 +162,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     options = optimoptions('fmincon', ...
         'Algorithm','interior-point', ...
         'Display','iter', ...
-        'MaxFunctionEvaluations', 5e5, ...
+        'MaxFunctionEvaluations', 1e5, ...
         'MaxIterations', 5000, ...
         'OptimalityTolerance',1e-5, ...
         'StepTolerance',1e-9);
