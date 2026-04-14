@@ -5,16 +5,17 @@
 % orbitEccentricity0 = 0.0001; % initial orbit eccentricity
 % orbitArgPeriapsis1 = -150; % final orbit argument of periapsis (degrees)
 % orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+clear all
+showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 
 % drag showcase
-orbitSemiMajorAxis1 = 7500; %km
-orbitEccentricity1 = 0.06; % final orbit eccentricity
-orbitSemiMajorAxis0 = 8000; %km
-orbitEccentricity0 = 0.0001; % initial orbit eccentricity
-orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
-orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
-satellitePlotStyle = 'boxwing';
-showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
+% orbitSemiMajorAxis1 = 7500; %km
+% orbitEccentricity1 = 0.06; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 8000; %km
+% orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+% satellitePlotStyle = 'boxwing';
 
 % eject showcase - debris
 % orbitSemiMajorAxis1 = 7300; %km
@@ -70,7 +71,7 @@ rf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1)
 
 figure;
 set(gcf, 'Color', 'w');
-set(gcf, 'Position',  [0, 0, 1080, 1080]*0.8)
+set(gcf, 'Position',  [0, 0, 1080, 1080]*0.9)
 hold on; axis equal;
 
 if exist('showAxesAndGrid', 'var') && showAxesAndGrid
@@ -88,7 +89,7 @@ k = 0; % y-coordinate of center
 
 % Implicit equation: (x-h)^(2) + (y-k)^(2) - r^(2) = 0
 
-title('Satellite Maneuvering Animation');
+% title('Satellite Maneuvering Animation');
 
 % Set axis limits with some padding
 % x_min = min(x(:,1)); x_max = max(x(:,1));
@@ -133,7 +134,7 @@ dy = y_max - y_min; if dy==0, dy=1; end
     omega_f = deg2rad(orbitArgPeriapsis1);
     pf = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2);
     rf_orbit = pf ./ (1 + orbitEccentricity1 * cos(th));
-    hFinal = plot(rf_orbit .* cos(th + omega_f), rf_orbit .* sin(th + omega_f), 'r-.', 'DisplayName', 'Target Orbit');
+    hFinal = plot(rf_orbit .* cos(th + omega_f), rf_orbit .* sin(th + omega_f), 'r-.', 'LineWidth', 2.5, 'DisplayName', 'Target Orbit');
 
     % Plot the target state
     r_target = orbitSemiMajorAxis1 * (1 - orbitEccentricity1^2) / (1 + orbitEccentricity1 * cos(theta_f));
@@ -142,7 +143,7 @@ dy = y_max - y_min; if dy==0, dy=1; end
     % hTarget = plot(target_x, target_y, 'gx', 'MarkerSize', 10, 'LineWidth', 2, 'DisplayName', 'Target Point');
    
     % Create animated line for trajectory and marker for satellite
-    hTraj = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Transfer Trajectory');
+    hTraj = animatedline('LineWidth', 2.5, 'Color', 'b', 'DisplayName', 'Transfer Trajectory');
 
     % Create proxy for Satellite legend
     hSatProxy = patch(NaN, NaN, 'g', 'EdgeColor', 'k', 'DisplayName', 'Satellite');
@@ -170,10 +171,10 @@ dy = y_max - y_min; if dy==0, dy=1; end
     % vWriter = VideoWriter(videoFilename);
     % vWriter.FrameRate = 20; % Adjust frame rate as needed
 
-    % videoFilename = VideoWriter('satellite_maneuver.avi','Motion JPEG AVI');
-    vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
+    vWriter = VideoWriter('satellite_maneuver.avi','Motion JPEG AVI');
+    % vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
     vWriter.FrameRate = 20;   % Set to 20 frames per second
-    vWriter.Quality = 100;
+    % vWriter.Quality = 100;
     open(vWriter);
    
     % Allow user to choose satellite plotting style:
@@ -192,8 +193,8 @@ dy = y_max - y_min; if dy==0, dy=1; end
     % Precreate graphics handle for square option to reuse
     h_square = [];
     for k = 1:frameStep:nSteps
-        xlim([x_min - 0.35*dx, x_max + 0.35*dx]);
-        ylim([y_min - 0.35*dy, y_max + 0.35*dy]);
+        xlim([x_min - 0.1*dx, x_max + 0.1*dx]);
+        ylim([y_min - 0.1*dy, y_max + 0.1*dy]);
         addpoints(hTraj, x(k, 1), x(k, 2));
         xc = x(k, 1);
         yc = x(k, 2);

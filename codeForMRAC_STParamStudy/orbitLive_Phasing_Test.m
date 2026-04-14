@@ -1,6 +1,6 @@
 % orbitLive_Phasing_Test.m
 % Showcases a rendezvous phasing maneuver between a chaser and a target satellite.
-% The chaser alters its initial orbit to a phasing orbit for kOrbit revolutions 
+% The chaser alters its initial orbit to a phasing orbit for kOrbit revolutions
 % to catch up with the target ahead.
 
 clear; clc; close all;
@@ -8,11 +8,11 @@ clear; clc; close all;
 %% Parameters
 muEarth = 398600; % km^3/s^2
 orbitSemiMajorAxis0 = 8000; % km, Initial orbit half major-axis
-orbitEccentricity0 = 0.05; % initial orbit eccentricity
-orbitArgPeriapsis0 = 30; % initial orbit argument of periapsis (degrees)
+orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+orbitArgPeriapsis0 = 20; % initial orbit argument of periapsis (degrees)
 
-targetPhaseAngleDeg = 25; % degrees, target is this far ahead of chaser in Mean Anomaly
-kOrbit = 2; % number of phasing orbits the chaser completes
+targetPhaseAngleDeg = 35; % degrees, target is this far ahead of chaser in Mean Anomaly
+kOrbit = 1; % number of phasing orbits the chaser completes
 
 satellitePlotStyle = 'boxwing'; % 'boxwing' or 'square'
 showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
@@ -46,7 +46,7 @@ fprintf('==================================================\n');
 
 %% Trajectory Simulation using ODE45
 options = odeset('RelTol', 1e-8, 'AbsTol', 1e-8);
-tspan1 = linspace(-T0/2, 0, 100);                  % Pre-burn
+tspan1 = linspace(-T0, 0, 100);                  % Pre-burn
 tspan2 = linspace(0, T_total, 350);                % Phasing maneuver
 tspan3 = linspace(T_total, T_total + T0/2, 100);   % Post-rendezvous
 
@@ -74,7 +74,7 @@ for i = 1:length(t_all)
     r = p0 / (1 + e0*cos(nu));
     pos_peri = [r*cos(nu); r*sin(nu)];
     vel_peri = [-sqrt(muEarth/p0)*sin(nu); sqrt(muEarth/p0)*(e0+cos(nu))];
-    
+
     pos = R_omega * pos_peri; vel = R_omega * vel_peri;
     target_x(i) = pos(1); target_y(i) = pos(2);
     target_vx(i) = vel(1); target_vy(i) = vel(2);
@@ -82,8 +82,8 @@ end
 
 % --- Chaser ODE45 Propagation ---
 % Phase 1 (Pre-burn)
-% Chaser starts at t = -T0/2, its Mean Anomaly M = -pi (Apoapsis of initial orbit)
-M_start = -target_mean_motion * (T0/2);
+% Chaser starts at t = -T0, its Mean Anomaly M = 0 (Periapsis of initial orbit)
+M_start = -target_mean_motion * T0;
 M_wrapped = mod(M_start, 2*pi);
 E_start = M_wrapped;
 for j=1:20; E_start = E_start - (E_start - e0*sin(E_start) - M_wrapped)/(1 - e0*cos(E_start)); end
@@ -116,7 +116,7 @@ chaser_vy = [chaser_state1(1:end-1, 4); chaser_state2(1:end-1, 4); chaser_state3
 %% Setup Animation
 figure;
 set(gcf, 'Color', 'w');
-set(gcf, 'Position',  [0, 0, 1080, 1080]*0.8);
+set(gcf, 'Position',  [0, 0, 1080, 1080]*0.9);
 hold on; axis equal;
 
 if exist('showAxesAndGrid', 'var') && showAxesAndGrid
@@ -127,7 +127,7 @@ else
     grid off;
     xlabel(''); ylabel('');
 end
-title(sprintf('Satellite Phasing Maneuver (%d Orbits to Rendezvous)', kOrbit));
+% title(sprintf('Satellite Phasing Maneuver (%d Orbits to Rendezvous)', kOrbit));
 
 % Bounding box for axes
 max_r = max(max(sqrt(chaser_x.^2 + chaser_y.^2)), max(sqrt(target_x.^2 + target_y.^2)));
@@ -155,7 +155,7 @@ th_plot = linspace(0, 2*pi, 150);
 r0_plot = p0 ./ (1 + e0 * cos(th_plot));
 pos0_peri = [r0_plot .* cos(th_plot); r0_plot .* sin(th_plot)];
 pos0_inertial = R_omega * pos0_peri;
-plot(pos0_inertial(1,:), pos0_inertial(2,:), 'k--', 'DisplayName', 'Main Orbit');
+plot(pos0_inertial(1,:), pos0_inertial(2,:), 'b--', 'LineWidth', 1.5,'DisplayName', 'Main Orbit');
 
 % Phasing orbit ellipse plot
 if a_phase >= rp
@@ -170,21 +170,27 @@ else
     peri_pos = [r_phase_plot .* cos(th_plot + pi); r_phase_plot .* sin(th_plot + pi)];
 end
 plot_pos = R_omega * peri_pos;
-plot(plot_pos(1,:), plot_pos(2,:), 'b:', 'DisplayName', 'Phasing Orbit');
+plot(plot_pos(1,:), plot_pos(2,:), 'r--', 'LineWidth', 2.5, 'DisplayName', 'Phasing Orbit');
 
 % Plot Trajectories via Animated Line
-hTrajTarget = animatedline('LineWidth', 1.5, 'Color', 'g', 'DisplayName', 'Target');
-hTrajChaser = animatedline('LineWidth', 1.5, 'Color', 'b', 'DisplayName', 'Chaser');
+hTrajTarget = animatedline('LineWidth', 2.5, 'Color', 'g', 'DisplayName', 'Target');
+hTrajChaser = animatedline('LineWidth', 2.5, 'Color', 'b', 'DisplayName', 'Chaser');
 % legend('Location', 'best');
 
-vWriter = VideoWriter('satellite_phasing_maneuver.mp4', 'MPEG-4');
-vWriter.FrameRate = 30;
-vWriter.Quality = 100;
+% vWriter = VideoWriter('satellite_phasing_maneuver.mp4', 'MPEG-4');
+% vWriter.FrameRate = 30;
+% vWriter.Quality = 100;
+
+vWriter = VideoWriter('satellite_maneuver_phasing.avi','Motion JPEG AVI');
+% vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
+vWriter.FrameRate = 20;   % Set to 20 frames per second
+% vWriter.Quality = 100;
+open(vWriter);
 open(vWriter);
 
-params.BodySize = 2*234;
-params.PanelLength = 2*248;
-params.PanelWidth = 2*222;
+params.BodySize = 234;
+params.PanelLength = 248;
+params.PanelWidth = 222;
 avg_span = (dx + dy) / 2;
 
 nSteps = length(t_all);
@@ -192,15 +198,15 @@ h_square_t = [];
 h_sat_c = [];
 
 for k = 1:nSteps
-    xlim([x_min - 0.2*dx, x_max + 0.2*dx]);
-    ylim([y_min - 0.2*dy, y_max + 0.2*dy]);
-    
+    xlim([x_min - 0.1*dx, x_max + 0.1*dx]);
+    ylim([y_min - 0.1*dy, y_max + 0.1*dy]);
+
     addpoints(hTrajChaser, chaser_x(k), chaser_y(k));
     addpoints(hTrajTarget, target_x(k), target_y(k));
-    
+
     theta_rot_c = atan2(chaser_vy(k), chaser_vx(k)) + pi/2;
     theta_rot_t = atan2(target_vy(k), target_vx(k)) + pi/2;
-    
+
     % Satellite Drawings
     % Target (Green Square)
     sq_half = max(0.01*avg_span, params.BodySize*0.5);
@@ -212,14 +218,14 @@ for k = 1:nSteps
     else
         set(h_square_t, 'XData', rot_t(1,:) + target_x(k), 'YData', rot_t(2,:) + target_y(k));
     end
-    
+
     % Chaser (Boxwing)
     if k == 1
         h_sat_c = draw_boxwing_satellite(chaser_x(k), chaser_y(k), theta_rot_c, params);
     else
         h_sat_c = draw_boxwing_satellite(chaser_x(k), chaser_y(k), theta_rot_c, params, h_sat_c);
     end
-    
+
     drawnow;
     writeVideo(vWriter, getframe(gcf));
 end
@@ -229,9 +235,9 @@ disp('[Success] Phasing maneuver animation generated and saved as satellite_phas
 
 %% ODE Helper for Two-body Propagation
 function dstate = twobody(~, state, mu)
-    r = norm(state(1:2));
-    dstate = [state(3);
-              state(4);
-             -mu*state(1)/r^3;
-             -mu*state(2)/r^3];
+r = norm(state(1:2));
+dstate = [state(3);
+    state(4);
+    -mu*state(1)/r^3;
+    -mu*state(2)/r^3];
 end
