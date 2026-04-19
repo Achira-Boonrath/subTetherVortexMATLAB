@@ -9,6 +9,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     %  1) 'pendulum'      - Simple Inverted Pendulum
     %  2) 'cartpole'      - Cart-Pole
     %  3) 'ejection'      - Restore Ejection
+    %  4) 'CWH'      - CWH RND
     %
     %  enforced_term_states: Array of state indices to strictly enforce at the final time.
     %  cost_choice: 'effort' or 'time'. Setting 'time' makes the final time T an optimization variable.
@@ -102,16 +103,13 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         xdot_min = -inf; xdot_max = inf;
         theta_min = -2*pi; theta_max = 2*pi;
         thetadot_min = -inf; thetadot_max = inf;
-        % xdot_min = -20; xdot_max = 20;
-        % theta_min = -4*pi; theta_max = 4*pi;
-        % thetadot_min = -50; thetadot_max = 50;
         
         lb_state = [x_min; xdot_min; theta_min; thetadot_min];
         ub_state = [x_max; xdot_max; theta_max; thetadot_max];
         
         % Cost weights
         R_u = 1;
-        Qf = (1e-9)*diag([50, 20, 200, 20]); % Penalize position, velocity, angle, angular velocity
+        Qf = (1e-9)*diag([1, 1, 1, 1]); % Penalize position, velocity, angle, angular velocity
         
     elseif strcmp(system_choice, 'ejection')
         m_net05 = 0.5458517235612266/2; % Half of net mass
@@ -147,8 +145,37 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         
         R_u = 1;
         Qf = (1e-9)*diag([1e-3, 1e-3, 1e-3, 1e-3]);
+    elseif strcmp(system_choice, 'CWH')
+        % Cartpole parameters
+        meanMotion = 0.001;
+        sys_params.n = meanMotion; 
+                
+        nx = 4;  % states: [x; y; x_dot; y_dot]
+        nu = 2;  % control: cart linear force
+        
+        % Initial condition (pendulum down, at x=0)
+        xd0 = [0; -1500; 0; 0];
+        % Desired final condition (upright, at x=0)
+        xf_des = [0; 0; 0; 0];
+        
+        % Bounds
+        maxForce = 1e+6;  % No force limits for CWH in this example
+        u_min = -[maxForce; maxForce]; u_max = [maxForce; maxForce]; % higher force bounds for cartpole
+
+        x_min = -1e+6; x_max = 1e+6;
+        xdot_min = -1e+6; xdot_max = 1e+6;
+        theta_min = -1e+6; theta_max = 1e+6;
+        thetadot_min = -1e+6; thetadot_max = 1e+6;
+        
+        lb_state = [x_min; xdot_min; theta_min; thetadot_min];
+        ub_state = [x_max; xdot_max; theta_max; thetadot_max];
+        
+        % Cost weights
+        R_u = 1;
+        Qf = (1e-9)*diag([1, 1, 1, 1]); % Penalize position, velocity, angle, angular velocity
+        
     else
-        error('Unknown system_choice. Use ''pendulum'', ''cartpole'', or ''ejection''.');
+        error('Unknown system_choice. ');
     end
 
     % Set default enforced terminal states if not provided (enforce everything)
@@ -172,10 +199,10 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         % --- DIRECT SINGLE SHOOTING SETUP ---
         % (we use N intervals but include controls at both endpoints to allow
         % simple reconstruction/plotting). z = [U(1:N+1); T_var].
-        U0 = zeros(N+1,1);              % initial guess: zero torque/force
-        Z0 = [U0; T_guess];             % full decision variable
-        lb = [u_min * ones(N+1,1); lb_T]; % lower bound on each control knot + Time bounds
-        ub = [u_max * ones(N+1,1); ub_T]; % upper bound on each control knot + Time bounds
+        U0 = zeros(nu, N+1);              % initial guess: zero torque/force
+        Z0 = [U0(:); T_guess];             % full decision variable
+        lb = [repmat(u_min, N+1, 1); lb_T]; % lower bound on each control knot + Time bounds
+        ub = [repmat(u_max, N+1, 1); ub_T]; % upper bound on each control knot + Time bounds
         
         % Solve with fmincon:
         % - objective computes integral cost by simulating forward with the
@@ -188,7 +215,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         
         fprintf('Finished. exitflag=%d, final J=%.6f\n', exitflag, J_opt);
         
-        U_opt = z_opt(1:end-1)';  % store controls as a row vector for consistent plotting
+        U_opt = reshape(z_opt(1:end-1), nu, N+1);  % store controls
         T_opt = z_opt(end);
         dt = T_opt / N;
         tgrid = linspace(0, T_opt, N+1);
@@ -200,7 +227,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         X_opt = zeros(nx,N+1);
         X_opt(:,1) = xd0;
         for k = 1:N
-            u_k = U_opt(k);  % apply optimal control 
+            u_k = U_opt(:,k);  % apply optimal control 
             [~,xint] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_k), [0 dt], X_opt(:,k));
             X_opt(:,k+1) = xint(end,:)'; % take state at end of interval
         end
@@ -309,23 +336,23 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         ylabel('theta dot (rad/s)'); grid on;
         
         subplot(4,1,3);
-        stairs(tgrid, U_opt, '-o', 'LineWidth', 1.2);
+        stairs(tgrid, U_opt', '-o', 'LineWidth', 1.2);
         ylabel('u (Nm)'); grid on;
         
         subplot(4,1,4);
         if strcmp(method_choice, 'collocation')
-            Umid = zeros(1,N);
+            Umid = zeros(nu,N);
             for k=1:N
-                Umid(k) = 0.5*(U_opt(1,k) + U_opt(1,k+1));
+                Umid(:,k) = 0.5*(U_opt(:,k) + U_opt(:,k+1));
             end
-            plot(tgrid_mid, Umid, '-o', 'LineWidth', 1.1);
+            plot(tgrid_mid, Umid', '-o', 'LineWidth', 1.1);
             ylabel('u_{mid} (Nm)'); xlabel('time (s)'); grid on;
         else
-            stairs(tgrid(1:end-1), U_opt(1:end-1), '-o', 'LineWidth', 1.1);
+            stairs(tgrid(1:end-1), U_opt(:, 1:end-1)', '-o', 'LineWidth', 1.1);
             ylabel('u piecewise (Nm)'); xlabel('time (s)'); grid on;
         end
         
-    elseif strcmp(system_choice, 'cartpole') || strcmp(system_choice, 'ejection')
+    elseif strcmp(system_choice, 'cartpole') || strcmp(system_choice, 'ejection') || strcmp(system_choice, 'CWH')
         subplot(3,2,1);
         plot(tgrid, X_opt(1,:), '-o', 'LineWidth', 1.2); hold on;
         if strcmp(method_choice, 'collocation')
@@ -357,7 +384,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         
         % controls span bottom row
         subplot(3,2,[5,6]);
-        stairs(tgrid, U_opt, '-o', 'LineWidth', 1.2);
+        stairs(tgrid, U_opt', '-o', 'LineWidth', 1.2);
         ylabel('Force u (N)'); xlabel('time (s)'); grid on; title('Control Output');
     end
     
@@ -406,6 +433,16 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             % axis equal;
             % xlim([-40, 40]); ylim([-40, 40]); 
             % title(sprintf('Ejection: t=%.2f s, yH=%.2f m, \\psi=%.2f rad', tgrid(k), yH, psi));
+        elseif strcmp(system_choice, 'CWH')
+            x_pos = X_opt(1,k);
+            y_pos = X_opt(2,k);
+            
+            plot(x_pos, y_pos, 'bo', 'MarkerSize', 8, 'MarkerFaceColor', 'b'); hold on;
+            plot(0, 0, 'rx', 'MarkerSize', 10, 'LineWidth', 2); % target
+            hold off;
+            axis equal;
+            xlim([-2000, 2000]); ylim([-2000, 2000]); 
+            title(sprintf('CWH: t=%.2f s, x=%.2f m, y=%.2f m', tgrid(k), x_pos, y_pos));
         end
         drawnow;
     end
@@ -462,7 +499,25 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
                (2 .* m_P .* l_0.* common_den);
             
             xd = [x(2); yH_ddot; psi_dot; psi_ddot];
+        elseif strcmp(system_choice, 'CWH')
+            x =  x(1);
+            yy =  x(2);
+            vx = x(3);
+            vy = x(4);
+
+            ax = u(1);
+            ay = u(2);
+
+            n = sys_params.n;
+            f = [vx; ...
+                vy; ...
+                3*n^2*x + 2*n*vy + ax; ...
+                -2*n*vx + ay; ...
+                ];
+            
+            xd = f;            
         end
+        
     end
 
     function a_wrapped = wrapToPi(ang)
@@ -487,18 +542,18 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     
     %% ---------------- Single Shooting Nested Functions ----------------
     function J = objFun_shooting(Z)
-        U = Z(1:end-1);
+        U = reshape(Z(1:end-1), nu, N+1);
         T_var = Z(end);
         dt_var = T_var / N;
         
         % Running cost (sum of squared controls over all intervals)
-        J_run = dt_var * sum(U.^2);
+        J_run = dt_var * sum(U(:).^2);
         J_run = R_u * J_run; 
 
         % Propagate system forward using piecewise-constant controls U
         x = xd0;  % initialize state at known initial condition
         for k_ss = 1:N
-            u_ss = U(k_ss);                                
+            u_ss = U(:, k_ss);                                
             % Integrate system dynamics over one interval [0, dt_var] with control u_ss
             [~, xint_ss] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             % Take the state at the end of the interval as the next initial state
@@ -517,14 +572,14 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     end
 
     function [c, ceq] = nonlcon_shooting(Z)
-        U = Z(1:end-1);
+        U = reshape(Z(1:end-1), nu, N+1);
         T_var = Z(end);
         dt_var = T_var / N;
         
         % Propagate state forward using the control sequence U
         x = xd0;
         for k_ss = 1:N
-            u_ss = U(k_ss);
+            u_ss = U(:, k_ss);
             [~, xint_ss] = ode45(@(t_ode,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             x = xint_ss(end, :)';
         end
