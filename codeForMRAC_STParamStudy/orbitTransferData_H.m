@@ -61,11 +61,12 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     % else
     %     tf = period*(theta_f/(2*pi)); % Wait time defined by angular separation
     % end
-    omega_diff = omega_f - omega_0;
+    % omega_diff = (omega_f + 180)- omega_0;
+    omega_diff = (omega_f)- omega_0;
     if abs(omega_diff) < 1e-4
         tf = period * 0.5; % Hohmann transfer baseline time (half period)
     else
-        tf = period* ( 0.5 + 1.01*((omega_diff)/(2*pi)) ); % Wait time defined by angular separation
+        tf = period* ( 0.5 + 1.0*((omega_diff)/(2*pi)) ); % Wait time defined by angular separation
     end
     
     %% Optimization & ODE Boundary Values
@@ -107,22 +108,24 @@ function [t, x, lambda, u] = orbitTransferData_H(af, ef, theta_f_deg, a0, e0, om
     % 1. Simulate the steady initial orbit (unpowered) over its orbital period
     periodInit = 2*pi*sqrt( (a0^3) /muVal  );
     z0Init = [1e-8*lambda0_guess; [r0_x r0_y 0 v0_x v0_y 0 1000]'];
+    % timeFinalInit = linspace(0, periodInit, ceil(periodInit*300/tf));
     timeFinalInit = linspace(0, periodInit, 300);
     [tInit, zInit] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalInit, z0Init, options);
 
     % 2. Simulate the transfer orbit using the computed Hohmann injection velocity
     minEctrl = false;
-    if abs(omega_diff) < 1e-4
-    [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
-    else
+    % if abs(omega_diff) < 1e-4
+    % [t,z] = transferSimImpulsive(lambda0_guess,x0,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
+    % else
     % [t,z] = optControl_singleShoot_Demo2(lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
     [t,z] = transferSimImpulsiveShooting(lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit);
-    end
+    % end
 
     % 3. Simulate the target (Final) orbit to visualize where the transfer terminates
     z0F = [1e-8*lambda0_guess; [r_apo_x r_apo_y 0 v_apo_x v_apo_y 0 1000]'];
     
     periodF = 2*pi*sqrt( (af^3) /muVal  );
+    % timeFinalF = linspace(0, periodF, ceil(periodF*300/tf)) ;
     timeFinalF = linspace(0, periodF, 300) ;
     [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinalF, z0F, odeset('RelTol', 1e-8, 'AbsTol', 1e-9,'Stats','off'));
     tF = tF + t(end); % Shift final orbit time array 
@@ -160,7 +163,7 @@ v0Solved = fsolve(@(v0) shootingFv0(v0,lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g
 
 % Stack initial condition z0 = [lambda0; x0] to integrate the ODE
 z0 = [1e-8*lambda0_guess; x0(1:3);v0Solved;x0(end)];
-timeFinal = linspace(0, tf, 300) ;
+timeFinal = linspace(0, tf, ceil(abs(tf)*300/tInit(end))+2) ;
 
 [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
 t = t + tInit(end); % Shift transfer time array to proceed strictly after initial orbit phase
@@ -169,7 +172,7 @@ end
 function F = shootingFv0(v0,lambda0_guess,x0,xf,tf,muEarth,Tmax,Isp,g0,epsilon,options,tInit)
 % Stack initial condition z0 = [lambda0; x0] to integrate the ODE
 z0 = [1e-8*lambda0_guess; x0(1:3);v0;x0(end)];
-timeFinal = linspace(0, tf, 300) ;
+timeFinal = linspace(0, tf, 100) ;
 
 [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon), timeFinal, z0, options);
 

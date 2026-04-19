@@ -91,17 +91,17 @@ r_target = 20;
 plot(r_target*cos(theta), r_target*sin(theta), 'r', 'LineWidth', 2);
 
 % Full trajectory
-plot(x, y, '--', 'Color', [0.7 0.7 0.7]);
+plot(x, y, 'r-.', 'LineWidth', 2);
 
 xlim([min(x)-200 max(x)+200]);
 ylim([min(y)-200 max(y)+200]);
 
 %% --- Define satellite geometry (body frame) ---
 % % Main body (square)
-body_size = 140;
+body_size = 130;
 % Solar panels (rectangles)
-panel_length = 180;
-panel_width  = 90;
+panel_length = 170;
+panel_width  = 80;
 params.BodySize    = body_size;
 params.PanelLength = panel_length;
 params.PanelWidth  = panel_width;
@@ -115,7 +115,7 @@ params.PanelWidth  = panel_width;
 % v = VideoWriter('rendezvous.avi','MPEG-4');
 v = VideoWriter('rendezvous.avi','Motion JPEG AVI');
 v.FrameRate = 20;   % Set to 20 frames per second
-v.Quality = 100;
+% v.Quality = 100;
 open(v);
 alignVel = false;
 % alignVel = true;

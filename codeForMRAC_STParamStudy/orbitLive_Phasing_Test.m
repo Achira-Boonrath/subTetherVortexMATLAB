@@ -12,7 +12,7 @@ orbitEccentricity0 = 0.0001; % initial orbit eccentricity
 orbitArgPeriapsis0 = 20; % initial orbit argument of periapsis (degrees)
 
 targetPhaseAngleDeg = 35; % degrees, target is this far ahead of chaser in Mean Anomaly
-kOrbit = 1; % number of phasing orbits the chaser completes
+kOrbit = 2; % number of phasing orbits the chaser completes
 
 satellitePlotStyle = 'boxwing'; % 'boxwing' or 'square'
 showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
@@ -46,12 +46,12 @@ fprintf('==================================================\n');
 
 %% Trajectory Simulation using ODE45
 options = odeset('RelTol', 1e-8, 'AbsTol', 1e-8);
-tspan1 = linspace(-T0, 0, 100);                  % Pre-burn
-tspan2 = linspace(0, T_total, 350);                % Phasing maneuver
-tspan3 = linspace(T_total, T_total + T0/2, 100);   % Post-rendezvous
+tspan1 = linspace(-T0, 0, 200);                  % Pre-burn
+tspan2 = linspace(0, T_total, ceil((200/T0)*T_total ));                % Phasing maneuver
+tspan3 = linspace(T_total, T_total + T0/2, ceil((200/T0)*(T0/2)));   % Post-rendezvous
 
 target_mean_motion = sqrt(muEarth / orbitSemiMajorAxis0^3);
-t_all = [tspan1(1:end-1), tspan2(1:end-1), tspan3];
+t_all = [tspan1(1:end), tspan2(1:end), tspan3];
 
 % Rotation matrix for argument of periapsis
 omega0 = deg2rad(orbitArgPeriapsis0);
@@ -108,10 +108,10 @@ vel_peri = [0; v0_peri];
 state_c3_0 = [R_omega * pos_peri; R_omega * vel_peri];
 [~, chaser_state3] = ode45(@(t, y) twobody(t, y, muEarth), tspan3, state_c3_0, options);
 
-chaser_x = [chaser_state1(1:end-1, 1); chaser_state2(1:end-1, 1); chaser_state3(:, 1)]';
-chaser_y = [chaser_state1(1:end-1, 2); chaser_state2(1:end-1, 2); chaser_state3(:, 2)]';
-chaser_vx = [chaser_state1(1:end-1, 3); chaser_state2(1:end-1, 3); chaser_state3(:, 3)]';
-chaser_vy = [chaser_state1(1:end-1, 4); chaser_state2(1:end-1, 4); chaser_state3(:, 4)]';
+chaser_x = [chaser_state1(1:end, 1); chaser_state2(1:end, 1); chaser_state3(:, 1)]';
+chaser_y = [chaser_state1(1:end, 2); chaser_state2(1:end, 2); chaser_state3(:, 2)]';
+chaser_vx = [chaser_state1(1:end, 3); chaser_state2(1:end, 3); chaser_state3(:, 3)]';
+chaser_vy = [chaser_state1(1:end, 4); chaser_state2(1:end, 4); chaser_state3(:, 4)]';
 
 %% Setup Animation
 figure;
@@ -197,6 +197,19 @@ nSteps = length(t_all);
 h_square_t = [];
 h_sat_c = [];
 
+% Pre-calculate burns (impulses) at Phase transitions
+burn_idx1 = length(tspan1) + 1;
+burn_idx2 = length(tspan1) + length(tspan2) + 1;
+dv1 = [chaser_vx(burn_idx1) - chaser_vx(burn_idx1-1); chaser_vy(burn_idx1) - chaser_vy(burn_idx1-1)];
+dv2 = [chaser_vx(burn_idx2) - chaser_vx(burn_idx2-1); chaser_vy(burn_idx2) - chaser_vy(burn_idx2-1)];
+arrowLength = avg_span * 0.15;
+dv1_norm = dv1 / norm(dv1) * arrowLength;
+dv2_norm = dv2 / norm(dv2) * arrowLength;
+arrow_frames_left = 0;
+arrow_u = 0; arrow_v = 0;
+
+hArrow = quiver(nan, nan, nan, nan, 0, 'Color', 'r', 'LineWidth', 2.5, 'MaxHeadSize', 0.5, 'DisplayName', 'Burn Direction');
+
 for k = 1:nSteps
     xlim([x_min - 0.1*dx, x_max + 0.1*dx]);
     ylim([y_min - 0.1*dy, y_max + 0.1*dy]);
@@ -214,7 +227,7 @@ for k = 1:nSteps
     Rt = [cos(theta_rot_t), -sin(theta_rot_t); sin(theta_rot_t), cos(theta_rot_t)];
     rot_t = Rt * corners;
     if k == 1
-        h_square_t = patch(rot_t(1,:) + target_x(k), rot_t(2,:) + target_y(k), 'g', 'EdgeColor', 'g', 'DisplayName', 'Target');
+        h_square_t = patch(rot_t(1,:) + target_x(k), rot_t(2,:) + target_y(k), 'g', 'EdgeColor', 'k', 'DisplayName', 'Target');
     else
         set(h_square_t, 'XData', rot_t(1,:) + target_x(k), 'YData', rot_t(2,:) + target_y(k));
     end
@@ -224,6 +237,22 @@ for k = 1:nSteps
         h_sat_c = draw_boxwing_satellite(chaser_x(k), chaser_y(k), theta_rot_c, params);
     else
         h_sat_c = draw_boxwing_satellite(chaser_x(k), chaser_y(k), theta_rot_c, params, h_sat_c);
+    end
+
+    % Burn indication logic
+    if k == burn_idx1
+        arrow_frames_left = 7;
+        arrow_u = dv1_norm(1); arrow_v = dv1_norm(2);
+    elseif k == burn_idx2
+        arrow_frames_left = 7;
+        arrow_u = dv2_norm(1); arrow_v = dv2_norm(2);
+    end
+
+    if arrow_frames_left > 0
+        set(hArrow, 'XData', chaser_x(k), 'YData', chaser_y(k), 'UData', arrow_u, 'VData', arrow_v);
+        arrow_frames_left = arrow_frames_left - 1;
+    else
+        set(hArrow, 'XData', nan, 'YData', nan, 'UData', nan, 'VData', nan);
     end
 
     drawnow;

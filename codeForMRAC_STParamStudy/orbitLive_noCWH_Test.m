@@ -8,6 +8,7 @@
 clear all
 showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 
+%% old set
 % drag showcase
 % orbitSemiMajorAxis1 = 7500; %km
 % orbitEccentricity1 = 0.06; % final orbit eccentricity
@@ -15,7 +16,16 @@ showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 % orbitEccentricity0 = 0.0001; % initial orbit eccentricity
 % orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
 % orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
-% satellitePlotStyle = 'boxwing';
+% % satellitePlotStyle = 'boxwing';
+
+% deorbit showcase - debris
+orbitSemiMajorAxis1 = 7200; %km
+orbitEccentricity1 = 0.08; % final orbit eccentricity
+orbitSemiMajorAxis0 = 7800; %km
+orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+orbitArgPeriapsis1 = -179; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+satellitePlotStyle = 'square';
 
 % eject showcase - debris
 % orbitSemiMajorAxis1 = 7300; %km
@@ -36,19 +46,19 @@ showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 % satellitePlotStyle = 'boxwing';
 
 % % reboost showcase - RESTORE
-orbitSemiMajorAxis1 = 8000; %km
-orbitEccentricity1 = 0.0001; % final orbit eccentricity
-orbitSemiMajorAxis0 = 7500 ; %km
-orbitEccentricity0 = 0.06 ; % initial orbit eccentricity
-orbitArgPeriapsis1 = 210; % final orbit argument of periapsis (degrees)
-orbitArgPeriapsis0 = 200; % initial orbit argument of periapsis (degrees)
-satellitePlotStyle = 'boxwing';
+% orbitSemiMajorAxis1 = 8000; %km
+% orbitEccentricity1 = 0.0001; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 7500 ; %km
+% orbitEccentricity0 = 0.06 ; % initial orbit eccentricity
+% orbitArgPeriapsis1 = 210; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = 200; % initial orbit argument of periapsis (degrees)
+% satellitePlotStyle = 'boxwing';
 
 %%
 
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 
-orbitTrueAnamoly = 180;
+orbitTrueAnamoly = 0;
 r0 = orbitSemiMajorAxis0 * (1 - orbitEccentricity0^2) / (1 + orbitEccentricity0); % initial periapsis
 orbitSemiMajorAxis = (orbitSemiMajorAxis1 + orbitSemiMajorAxis0)/2;
 
@@ -190,6 +200,20 @@ dy = y_max - y_min; if dy==0, dy=1; end
     nSteps = length(t);
     frameStep = max(1, floor(nSteps / 200)); % Target approx 300 frames max (~10s at 30fps)
    
+    % Pre-calculate burns (impulses) at Phase transitions
+    burn_idx1 = 301;
+    burn_idx2 = 401;
+    % dv1_c = [0; x(burn_idx1, 5) - x(burn_idx1-1, 5)]
+    dv1_c = [x(burn_idx1, 4) - x(burn_idx1-1, 4); x(burn_idx1, 5) - x(burn_idx1-1, 5)]
+    % dv2_c = -[x(burn_idx2, 4) - x(burn_idx2-1, 4); x(burn_idx2, 5) - x(burn_idx2-1, 5)];
+    arrowLength = avg_span * 0.15;
+    dv1_norm = dv1_c / norm(dv1_c) * arrowLength;
+    % dv2_norm = dv2_c / norm(dv2_c) * arrowLength;
+    arrow_frames_left = 0;
+    arrow_u = 0; arrow_v = 0;
+
+    hArrow = quiver(nan, nan, nan, nan, 0, 'Color', 'r', 'LineWidth', 2.5, 'MaxHeadSize', 0.5, 'DisplayName', 'Burn Direction');
+
     % Precreate graphics handle for square option to reuse
     h_square = [];
     for k = 1:frameStep:nSteps
@@ -229,6 +253,22 @@ dy = y_max - y_min; if dy==0, dy=1; end
                     h_sat = draw_boxwing_satellite(xc, yc, theta_rot, params, h_sat);
                 end
         end
+
+        % Burn indication logic
+        % if k > 1 && k <= burn_idx1 && k + frameStep > burn_idx1
+        %     arrow_frames_left = 3;
+        %     arrow_u = dv1_norm(1); arrow_v = dv1_norm(2);
+        % elseif k > 1 && k <= burn_idx2 && k + frameStep > burn_idx2
+        %     % arrow_frames_left = 10;
+        %     % arrow_u = dv2_norm(1); arrow_v = dv2_norm(2);
+        % end
+        % 
+        % if arrow_frames_left > 0
+        %     set(hArrow, 'XData', xc, 'YData', yc, 'UData', arrow_u, 'VData', arrow_v);
+        %     arrow_frames_left = arrow_frames_left - 1;
+        % else
+        %     set(hArrow, 'XData', nan, 'YData', nan, 'UData', nan, 'VData', nan);
+        % end
 
         drawnow;
         
