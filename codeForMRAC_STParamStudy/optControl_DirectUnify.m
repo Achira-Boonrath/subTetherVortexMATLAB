@@ -38,8 +38,8 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     fprintf('System: %s\n', upper(system_choice));
     
     %% Common Problem Setup
-    T_guess = 2.0;         % default time guess (s)
-    N = 40;                % number of intervals
+    T_guess = 3600*0.5;         % default time guess (s)
+    N = 200;                % number of intervals
     
     % Depending on cost_choice, T may vary:
     if strcmp(cost_choice, 'time')
@@ -163,12 +163,12 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         u_min = -[maxForce; maxForce]; u_max = [maxForce; maxForce]; % higher force bounds for cartpole
 
         x_min = -1e+6; x_max = 1e+6;
-        xdot_min = -1e+6; xdot_max = 1e+6;
-        theta_min = -1e+6; theta_max = 1e+6;
-        thetadot_min = -1e+6; thetadot_max = 1e+6;
+        y_min = -1e+6; y_max = 1e+6;
+        vx_min = -1e+6; vx_max = 1e+6;
+        vy_min = -1e+6; vy_max = 1e+6;
         
-        lb_state = [x_min; xdot_min; theta_min; thetadot_min];
-        ub_state = [x_max; xdot_max; theta_max; thetadot_max];
+        lb_state = [x_min; y_min; vx_min; vy_min];
+        ub_state = [x_max; y_max; vx_max; vy_max];
         
         % Cost weights
         R_u = 1;
@@ -222,13 +222,13 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         tgrid_mid = tgrid(1:end-1) + dt/2;
 
         % Reconstruct state trajectory from optimal control using numerical
-        % integration (ode45) over each interval of length dt. This produces
+        % integration (ode23) over each interval of length dt. This produces
         % X_opt(:,k) for k=1..N+1 corresponding to knots t=0:dt:T_opt.
         X_opt = zeros(nx,N+1);
         X_opt(:,1) = xd0;
         for k = 1:N
             u_k = U_opt(:,k);  % apply optimal control 
-            [~,xint] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_k), [0 dt], X_opt(:,k));
+            [~,xint] = ode23(@(t_var,x_ode) system_dynamics(x_ode, u_k), [0 dt], X_opt(:,k));
             X_opt(:,k+1) = xint(end,:)'; % take state at end of interval
         end
         Xm_opt = [];     % midpoints are not used in shooting approach
@@ -358,29 +358,53 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         if strcmp(method_choice, 'collocation')
             plot(tgrid_mid, Xm_opt(1,:), 'o', 'MarkerSize', 4);
         end
-        ylabel('x (m)'); grid on; title(sprintf('%s (%s): Position', upper(system_choice), method_choice));
+        if strcmp(system_choice, 'CWH')
+            ylabel('x (m)'); title('CWH: x-position');
+        else
+            ylabel('x (m)'); title(sprintf('%s (%s): Position', upper(system_choice), method_choice));
+        end
+        grid on;
         
         subplot(3,2,3);
         plot(tgrid, X_opt(2,:), '-o', 'LineWidth', 1.2); hold on;
         if strcmp(method_choice, 'collocation')
             plot(tgrid_mid, Xm_opt(2,:), 'o', 'MarkerSize', 4);
         end
-        ylabel('x dot (m/s)'); grid on;
+        if strcmp(system_choice, 'CWH')
+            ylabel('y (m)'); title('CWH: y-position');
+        else
+            ylabel('x dot (m/s)');
+        end
+        grid on;
         
         subplot(3,2,2);
-        plot(tgrid, wrapToPi(X_opt(3,:)), '-o', 'LineWidth', 1.2); hold on;
-        if strcmp(method_choice, 'collocation')
-            plot(tgrid_mid, wrapToPi(Xm_opt(3,:)), 'o', 'MarkerSize', 4);
+        if strcmp(system_choice, 'CWH')
+            plot(tgrid, X_opt(3,:), '-o', 'LineWidth', 1.2); hold on;
+            if strcmp(method_choice, 'collocation')
+                plot(tgrid_mid, Xm_opt(3,:), 'o', 'MarkerSize', 4);
+            end
+            ylabel('vx (m/s)'); title('CWH: x-velocity');
+        else
+            plot(tgrid, wrapToPi(X_opt(3,:)), '-o', 'LineWidth', 1.2); hold on;
+            if strcmp(method_choice, 'collocation')
+                plot(tgrid_mid, wrapToPi(Xm_opt(3,:)), 'o', 'MarkerSize', 4);
+            end
+            ylabel('\theta (rad)'); title('Pole Angle');
+            plot(tgrid, ones(size(tgrid))*pi, '--k', 'HandleVisibility', 'off');
         end
-        ylabel('\theta (rad)'); grid on; title('Pole Angle');
-        plot(tgrid, ones(size(tgrid))*pi, '--k', 'HandleVisibility', 'off');
+        grid on;
         
         subplot(3,2,4);
         plot(tgrid, X_opt(4,:), '-o', 'LineWidth', 1.2); hold on;
         if strcmp(method_choice, 'collocation')
             plot(tgrid_mid, Xm_opt(4,:), 'o', 'MarkerSize', 4);
         end
-        ylabel('theta dot (rad/s)'); grid on;
+        if strcmp(system_choice, 'CWH')
+            ylabel('vy (m/s)'); title('CWH: y-velocity');
+        else
+            ylabel('theta dot (rad/s)');
+        end
+        grid on;
         
         % controls span bottom row
         subplot(3,2,[5,6]);
@@ -388,6 +412,41 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         ylabel('Force u (N)'); xlabel('time (s)'); grid on; title('Control Output');
     end
     
+    %% exact solu for u
+    if strcmp(system_choice, 'CWH')
+        n = meanMotion;
+        % A = [[zeros(3,3),eye(3,3)];...
+        %     [3*n^2, 0 , 0, 0, 2*n, 0];...
+        %     [0, 0, 0, -2*n, 0, 0];...
+        %     [0, 0, -n^2, 0, 0, 0]];
+        % B = [zeros(3,3);eye(3,3)];
+        
+        % Define the system matrices for the 2D CWH model
+        A = [[zeros(2,2), eye(2,2)]; ...      % Top: zeros and identity for position/velocity coupling
+            [3*n^2, 0, 0, 2*n]; ...           % Bottom: CWH dynamics for x
+            [0, 0, -2*n, 0]];                 % Bottom: CWH dynamics for y
+        B = [zeros(2,2); eye(2,2)];           % Control input matrix (affects acceleration states)
+        
+        t0 = 0.0;                             % Initial time
+        % syms tau real                         % Symbolic variable for integration
+        
+        % Compute the controllability Gramian g for [t0, tgrid(end)] using matrix exponentials
+        fun = @(tau) expm(A*(t0-tau)) * B * (B.') * expm(A.'*(t0-tau));
+        g = integral(fun, 0, tgrid(end), 'ArrayValued', true);
+
+        % Compute the exact optimal control using the analytical solution for LQR with fixed final state
+        for jj = 1:length(tgrid)
+            % solution (from t0)
+            uExact(jj, :) = - (B') * expm(A' * (0 - tgrid(jj))) * pinv(g) * (xd0 - expm(A * (0 - tgrid(end))) * xf_des);
+        end
+        
+        % Plot the relative error between the numerically computed and exact controls
+        figure;
+        % plot((U_opt' - uExact) ./ U_opt')
+        plot((U_opt' - uExact));
+        grid minor
+        title('Relative Error: (u - uExact) / uExact')
+    end
     %% Animation
     figure;
     for k = 1:2:length(tgrid)
@@ -500,7 +559,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             
             xd = [x(2); yH_ddot; psi_dot; psi_ddot];
         elseif strcmp(system_choice, 'CWH')
-            x =  x(1);
+            xx =  x(1);
             yy =  x(2);
             vx = x(3);
             vy = x(4);
@@ -511,7 +570,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             n = sys_params.n;
             f = [vx; ...
                 vy; ...
-                3*n^2*x + 2*n*vy + ax; ...
+                3*n^2*xx + 2*n*vy + ax; ...
                 -2*n*vx + ay; ...
                 ];
             
@@ -534,6 +593,8 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
             ang_err = wrapToPi(xN(1) - xf_des(1));
             vel_err = xN(2) - xf_des(2);
             xerr = [ang_err; vel_err];
+        elseif strcmp(system_choice, 'CWH')
+            xerr = xN - xf_des;
         else
             ang_err = wrapToPi(xN(3) - xf_des(3));
             xerr = [xN(1)-xf_des(1); xN(2)-xf_des(2); ang_err; xN(4)-xf_des(4)];
@@ -555,7 +616,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         for k_ss = 1:N
             u_ss = U(:, k_ss);                                
             % Integrate system dynamics over one interval [0, dt_var] with control u_ss
-            [~, xint_ss] = ode45(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
+            [~, xint_ss] = ode23(@(t_var,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             % Take the state at the end of the interval as the next initial state
             x = xint_ss(end, :)';                          
         end
@@ -580,7 +641,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
         x = xd0;
         for k_ss = 1:N
             u_ss = U(:, k_ss);
-            [~, xint_ss] = ode45(@(t_ode,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
+            [~, xint_ss] = ode23(@(t_ode,x_ode) system_dynamics(x_ode, u_ss), [0 dt_var], x);
             x = xint_ss(end, :)';
         end
         
