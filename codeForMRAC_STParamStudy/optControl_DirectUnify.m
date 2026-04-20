@@ -39,7 +39,7 @@ function optControl_DirectUnify(method_choice, system_choice, enforced_term_stat
     
     %% Common Problem Setup
     T_guess = 3600*0.5;         % default time guess (s)
-    N = 200;                % number of intervals
+    N = 300;                % number of intervals
     
     % Depending on cost_choice, T may vary:
     if strcmp(cost_choice, 'time')

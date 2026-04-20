@@ -21,7 +21,7 @@ close all; clear all; clc
 
 %% Problem data
 tf = 3600*0.5;                % Final time (seconds) 
-x0 = [0 -500 0 0 ]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
+x0 = [0 -1500 0 0 ]';           % Initial state: x (m), y (m), vx (m/s), vy (m/s)
 xf = [0  0 0 0 ]';             % Desired terminal state at t = tf
 
 % Initial guess for costates (at t=0). fsolve will update this.
@@ -131,7 +131,7 @@ end
 figure;
 plot((u - uExact) ./ uExact)
 hold on
-plot((u - uExact2) ./ uExact2)
+plot((u - uExact2) ./ uExact2, "--")
 grid minor
 title('Relative Error: (u - uExact) / uExact')
 
