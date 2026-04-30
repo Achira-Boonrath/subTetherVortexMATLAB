@@ -98,9 +98,9 @@ ylim([min(y)-200 max(y)+200]);
 
 %% --- Define satellite geometry (body frame) ---
 % % Main body (square)
-body_size = 130;
+body_size = 120;
 % Solar panels (rectangles)
-panel_length = 170;
+panel_length = 160;
 panel_width  = 80;
 params.BodySize    = body_size;
 params.PanelLength = panel_length;

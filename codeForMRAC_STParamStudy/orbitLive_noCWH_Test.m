@@ -16,16 +16,16 @@ showAxesAndGrid = false; % Toggle for x/y ticks and grid lines
 % orbitEccentricity0 = 0.0001; % initial orbit eccentricity
 % orbitArgPeriapsis1 = -160; % final orbit argument of periapsis (degrees)
 % orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
-% % satellitePlotStyle = 'boxwing';
+% satellitePlotStyle = 'boxwing';
 
 % deorbit showcase - debris
-orbitSemiMajorAxis1 = 7200; %km
-orbitEccentricity1 = 0.08; % final orbit eccentricity
-orbitSemiMajorAxis0 = 7800; %km
-orbitEccentricity0 = 0.0001; % initial orbit eccentricity
-orbitArgPeriapsis1 = -179; % final orbit argument of periapsis (degrees)
-orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
-satellitePlotStyle = 'square';
+% orbitSemiMajorAxis1 = 7200; %km
+% orbitEccentricity1 = 0.08; % final orbit eccentricity
+% orbitSemiMajorAxis0 = 7800; %km
+% orbitEccentricity0 = 0.0001; % initial orbit eccentricity
+% orbitArgPeriapsis1 = -179; % final orbit argument of periapsis (degrees)
+% orbitArgPeriapsis0 = 0; % initial orbit argument of periapsis (degrees)
+% satellitePlotStyle = 'square';
 
 % eject showcase - debris
 % orbitSemiMajorAxis1 = 7300; %km
@@ -46,13 +46,13 @@ satellitePlotStyle = 'square';
 % satellitePlotStyle = 'boxwing';
 
 % % reboost showcase - RESTORE
-% orbitSemiMajorAxis1 = 8000; %km
-% orbitEccentricity1 = 0.0001; % final orbit eccentricity
-% orbitSemiMajorAxis0 = 7500 ; %km
-% orbitEccentricity0 = 0.06 ; % initial orbit eccentricity
-% orbitArgPeriapsis1 = 210; % final orbit argument of periapsis (degrees)
-% orbitArgPeriapsis0 = 200; % initial orbit argument of periapsis (degrees)
-% satellitePlotStyle = 'boxwing';
+orbitSemiMajorAxis1 = 8000; %km
+orbitEccentricity1 = 0.0001; % final orbit eccentricity
+orbitSemiMajorAxis0 = 7500 ; %km
+orbitEccentricity0 = 0.06 ; % initial orbit eccentricity
+orbitArgPeriapsis1 = 210; % final orbit argument of periapsis (degrees)
+orbitArgPeriapsis0 = 200; % initial orbit argument of periapsis (degrees)
+satellitePlotStyle = 'boxwing';
 
 %%
 
@@ -159,10 +159,10 @@ dy = y_max - y_min; if dy==0, dy=1; end
     hSatProxy = patch(NaN, NaN, 'g', 'EdgeColor', 'k', 'DisplayName', 'Satellite');
 
     % % Main body (square)
-    body_size = 2*134;
+    body_size = 2.4*134;
     % Solar panels (rectangles)
-    panel_length = 2*148;
-    panel_width  = 2*122;
+    panel_length = 2.4*148;
+    panel_width  = 2.4*122;
     params.BodySize    = body_size;
     params.PanelLength = panel_length;
     params.PanelWidth  = panel_width;
@@ -181,8 +181,8 @@ dy = y_max - y_min; if dy==0, dy=1; end
     % vWriter = VideoWriter(videoFilename);
     % vWriter.FrameRate = 20; % Adjust frame rate as needed
 
-    vWriter = VideoWriter('satellite_maneuver.avi','Motion JPEG AVI');
-    % vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
+    % vWriter = VideoWriter('satellite_maneuver.avi','Motion JPEG AVI');
+    vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
     vWriter.FrameRate = 20;   % Set to 20 frames per second
     % vWriter.Quality = 100;
     open(vWriter);

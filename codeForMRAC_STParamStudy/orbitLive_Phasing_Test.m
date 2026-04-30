@@ -170,7 +170,7 @@ else
     peri_pos = [r_phase_plot .* cos(th_plot + pi); r_phase_plot .* sin(th_plot + pi)];
 end
 plot_pos = R_omega * peri_pos;
-plot(plot_pos(1,:), plot_pos(2,:), 'r--', 'LineWidth', 2.5, 'DisplayName', 'Phasing Orbit');
+plot(plot_pos(1,:), plot_pos(2,:), 'r-.', 'LineWidth', 2.5, 'DisplayName', 'Phasing Orbit');
 
 % Plot Trajectories via Animated Line
 hTrajTarget = animatedline('LineWidth', 2.5, 'Color', 'g', 'DisplayName', 'Target');
@@ -181,8 +181,8 @@ hTrajChaser = animatedline('LineWidth', 2.5, 'Color', 'b', 'DisplayName', 'Chase
 % vWriter.FrameRate = 30;
 % vWriter.Quality = 100;
 
-vWriter = VideoWriter('satellite_maneuver_phasing.avi','Motion JPEG AVI');
-% vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
+% vWriter = VideoWriter('satellite_maneuver_phasing.avi','Motion JPEG AVI');
+vWriter = VideoWriter('satellite_maneuver.mp4','MPEG-4');
 vWriter.FrameRate = 20;   % Set to 20 frames per second
 % vWriter.Quality = 100;
 open(vWriter);
