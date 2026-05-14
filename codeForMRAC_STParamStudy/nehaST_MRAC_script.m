@@ -35,11 +35,11 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % load("dataForNI1_009_1MT_compare.mat")
 
     %% Varying Target Params
-    TargetH = 10.2;
+    TargetH = 11;
     % debrisSideLengthZ = [-0.5*TargetH, 0.5*TargetH, -0.5*TargetH, 0.5*TargetH];
 
     % MODIFY THE TARGET COM OFFSET DISTANCE HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    debrisCoMOffsetScalar = -3.0; % range = linspace( -0.5 , -5.0 , 10) 
+    debrisCoMOffsetScalar = -3; % range = linspace( -0.5 , -5.0 , 10) 
     offsetAtt1 = -0.5*TargetH - debrisCoMOffsetScalar; 
     debrisSideLengthZ = [offsetAtt1, TargetH - abs(offsetAtt1), offsetAtt1, TargetH - abs(offsetAtt1)];
 
@@ -133,7 +133,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         l0_st = wIn(2)*(ub - lb) +  lb; % Compute sub-tether length
 
         % Define vectors for tether parameters
-        l0vec = [l0_mt, l0_st*ones(1,4)]; % Initial lengths
+        % l0vec = [l0_mt, l0_st*ones(1,4)]; % Initial lengths
+        l0vec = [l0_mt, 9.9*ones(1,4)]; % Initial lengths
         Kvec = [data.inertialMTParams(end-2), threadStiffness, threadStiffness, threadStiffness, threadStiffness]; % Stiffness values
         cVec = [data.inertialMTParams(end-1), threadDamping, threadDamping, threadDamping, threadDamping]; % Damping values
 
@@ -267,6 +268,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             FmagST(k) = norm(accControl * chaserM);
         end
 
+        save(sprintf('subTetherMRAC_forDraw.mat'));
         %% optional Plotting
         % if LiamSet == 0
         %     MRACterms_Python = dataMRAC.MRAC;

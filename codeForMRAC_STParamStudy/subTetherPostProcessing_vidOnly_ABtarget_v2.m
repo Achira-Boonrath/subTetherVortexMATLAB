@@ -9,8 +9,8 @@ mu = 3.986*10^5;
 
 %% Load sub-tether data
 
-load("subTetherMRAC_v2.mat")
-
+% load("subTetherMRAC_v2.mat")
+load("subTetherMRAC_v1_kA_13376.mat")
 % load("idset2_TxtOut/opt_vars_idset2_3var_2pt_v2_1.mat")
 Func = 1;
 
@@ -165,7 +165,8 @@ Zenit = ZenitBody(0);
     vidObj.FrameRate = 20;
 
     open(vidObj);
-    for hh = 1:10:round(length(Time)/1)
+    % for hh = 1:10:round(length(Time)/1)
+    for hh = round(length(Time)/1)
     % for hh = 1375
     % for hh = 2751
     % for hh = [1375, 2751]
