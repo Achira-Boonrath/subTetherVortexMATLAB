@@ -16,8 +16,8 @@ function optControl_singleShoot_2body
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 close all; clear all; clc
-% propulsionType = 'chemical'; % Options: 'chemical', 'electric'
-propulsionType = 'electric'; % Options: 'chemical', 'electric'
+propulsionType = 'chemical'; % Options: 'chemical', 'electric'
+% propulsionType = 'electric'; % Options: 'chemical', 'electric'
 %%
 
 % System Parameters:
@@ -117,7 +117,7 @@ muEarth=muVal;
 
 switch propulsionType
     case 'chemical'
-        Tmax=1425*1e-3; %in kN
+        Tmax=40000*1e-3; %in kN
         Isp=230;
     case 'electric'
         Tmax=0.1*1e-3; %in kN
@@ -163,7 +163,7 @@ end
 switch propulsionType
     case 'chemical'
         objfun = @(lam0) shootingConstT_FixedFinal(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon)' ...
-                * diagF_Inv * shootingConstT_FixedFinal(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
+            * diagF_Inv * shootingConstT_FixedFinal(lam0', x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon);
     case 'electric'
         % objfun = @(lam0) norm(shootingConstTFreeTheta(lam0', x0, tf, muEarth, Tmax, Isp, g0, epsilon, muVal, at, et, it ,Omega_t, omega_t))^2;
         if minT ==0
@@ -177,7 +177,7 @@ end
 
 nvars = length(lambda0_guess);
 
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 100, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 150, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
@@ -223,7 +223,7 @@ end
 switch propulsionType
     case 'chemical'
         z0 = [lambda0; x0];
-        
+
         [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1) ), [0 tf], z0);
     case 'electric'
 
@@ -354,8 +354,8 @@ if max_u == 0, scale_inv = 1; else, scale_inv = (0.15 * avg_span) / max_u; end
 
 % Initialize thrust vector (scaled)
 % Plotting x-y components of thrust
-hThrust = quiver(x(1, 1), x(1, 2), u_vec_plot(1, 1)*scale_inv, u_vec_plot(1, 2)*scale_inv, ...
-    'r', 'LineWidth', 2, 'MaxHeadSize', 0.5, 'AutoScale', 'off', 'DisplayName', 'Thrust Direction');
+% hThrust = quiver(x(1, 1), x(1, 2), u_vec_plot(1, 1)*scale_inv, u_vec_plot(1, 2)*scale_inv, ...
+%     'r', 'LineWidth', 2, 'MaxHeadSize', 0.5, 'AutoScale', 'off', 'DisplayName', 'Thrust Direction');
 
 legend('show', 'Location', 'bestoutside');
 
@@ -368,27 +368,31 @@ xlim([x_min - 0.2*dx, x_max + 0.2*dx]);
 ylim([y_min - 0.2*dy, y_max + 0.2*dy]);
 
 % Setup Video Writer
-videoFilename = 'satellite_maneuver.mp4';
-vWriter = VideoWriter(videoFilename, 'MPEG-4');
+videoFilename = 'satellite_maneuver.avi';
+vWriter = VideoWriter(videoFilename, 'Uncompressed AVI');
 vWriter.FrameRate = 30; % Adjust frame rate as needed
+% vWriter.Quality = 100;
 open(vWriter);
 
 % Loop through time steps to animate
 % Depending on the number of steps in 't', we might want to skip frames to keep video short
 nSteps = length(t);
 frameStep = max(1, floor(nSteps / 300)); % Target approx 300 frames max (~10s at 30fps)
+a = 500+6378;
+b = 1200+6378;
+fimplicit(@(x, y) x.^2/a.^2 + y.^2/b.^2 - 1)
 
 for k = 1:frameStep:nSteps
     addpoints(hTraj, x(k, 1), x(k, 2));
     set(hSat, 'XData', x(k, 1), 'YData', x(k, 2));
 
     % Update thrust vector
-    set(hThrust, 'XData', x(k, 1), 'YData', x(k, 2), ...
-        'UData', u_vec_plot(k, 1)*scale_inv, 'VData', u_vec_plot(k, 2)*scale_inv);
+    % set(hThrust, 'XData', x(k, 1), 'YData', x(k, 2), ...
+    %     'UData', u_vec_plot(k, 1)*scale_inv, 'VData', u_vec_plot(k, 2)*scale_inv);
 
     drawnow;
 
-    viscircles([0 0],[r0 ],'LineStyle','--');
+    % viscircles([0 0],[r0 ],'LineStyle','--');
     % viscircles([0 0],[rf],'LineStyle','-.');
     axis equal;
     % Capture frame for video
@@ -409,21 +413,26 @@ fprintf('Animation saved to %s\n', videoFilename);
 end
 
 %%
-function F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
-    options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
-    [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
-    x_tf = z(end, length(z0) + 1 - length(xf)  : end)'; % extract state portion at final time
-    
-    F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0));...
-        ];  % terminal error
-end 
+function F = solveODE__FixedFinal(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
+options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
+% Disable all ode45-related warnings
+warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
+warning('off', 'MATLAB:ode45:IntegrationFailed');
+warning('off', 'MATLAB:odewarn:IntegrationTolNotMet');
+warning('off', 'MATLAB:ode15s:IntegrationTolNotMet'); % sometimes triggered internally
+[~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
+x_tf = z(end, length(z0) + 1 - length(xf)  : end)'; % extract state portion at final time
+
+F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0));...
+    ];  % terminal error
+end
 
 function F = shootingConstT_FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon)
 
 L0= costate_from_D( lambda0(1:end) );
 z0 = [L0(2:end); x0];
 % Call helper to integrate and compute terminal constraints
-F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
+F = solveODE__FixedFinal(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0);
 
 end
 
@@ -431,7 +440,7 @@ function F = shootingConstT_FixedFinal_Trust(lambda0, x0, xf, tf, muEarth, Tmax,
 
 z0 = [lambda0(1:end); x0];
 % Call helper to integrate and compute terminal constraints
-F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
+F = solveODE__FixedFinal(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0);
 
 end
 
