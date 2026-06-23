@@ -30,7 +30,7 @@ ds(10) =x(6);
 %     + L(5)*L(6)^2*Tmag*nPos^(3/2))/(x(7)*nLv^(3/2)*nPos^(3/2));
 % ds(13) =-(L(6)^3*Tmag*nPos^(3/2) + muEarth*x(3)*x(7)*nLv^(3/2) + L(4)^2*L(6)*Tmag*nPos^(3/2)...
 %     + L(5)^2*L(6)*Tmag*nPos^(3/2))/(x(7)*nLv^(3/2)*nPos^(3/2));
-ds(11:13) = - (muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/nLv^(1/2) )*Tmag/x(7);
+ds(11:13) = - (muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/(nLv)^(1/2) )*Tmag/x(7);
 ds(14) = (-(Tmag*g0)/Isp);
 % abs(ds(11:13))  - abs(-(muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/nLv^(1/2) )*Tmag/x(7))
 
