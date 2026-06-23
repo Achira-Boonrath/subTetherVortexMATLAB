@@ -16,8 +16,8 @@ function optControl_singleShoot_2body
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 close all; clear all; clc
-propulsionType = 'chemical'; % Options: 'chemical', 'electric'
-% propulsionType = 'electric'; % Options: 'chemical', 'electric'
+% propulsionType = 'chemical'; % Options: 'chemical', 'electric'
+propulsionType = 'electric'; % Options: 'chemical', 'electric'
 %%
 
 % System Parameters:
@@ -228,11 +228,10 @@ switch propulsionType
     case 'electric'
 
         if minT ==0
-            z0 = [lambda0; x0];
+            z0 = [lambda0(1:end-1); x0];
             [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1)), [0 tf], z0);
         else
-            lambda0 = lambda0(1:end-1);
-            z0 = [lambda0; x0];
+            z0 = [lambda0(1:end-1); x0];
 
             [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1), 1), [0 tf], z0);
         end
@@ -410,32 +409,29 @@ fprintf('Animation saved to %s\n', videoFilename);
 end
 
 %%
+function F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
+    options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
+    [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
+    x_tf = z(end, length(z0) + 1 - length(xf)  : end)'; % extract state portion at final time
+    
+    F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0));...
+        ];  % terminal error
+end 
 
 function F = shootingConstT_FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon)
 
 L0= costate_from_D( lambda0(1:end) );
 z0 = [L0(2:end); x0];
-
-options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
-[~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
-x_tf = z(end, length(z0) + 1 - length(xf)  : end).'; % extract state portion at final time
-
-F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0));...
-    ];  % terminal error
+% Call helper to integrate and compute terminal constraints
+F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
 
 end
 
 function F = shootingConstT_FixedFinal_Trust(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
 
 z0 = [lambda0(1:end); x0];
-
 % Call helper to integrate and compute terminal constraints
-options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
-[~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
-x_tf = z(end, length(z0) + 1 - length(xf)  : end)'; % extract state portion at final time
-
-F = [x_tf(1:end-1) - xf(1:end-1); z(end,length(x0));...
-    ];  % terminal error
+F = solveODE__FixedFinal(lambda0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
 
 end
 
