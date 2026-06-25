@@ -11,7 +11,7 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
         direction = 0;   % The zero can be approached from either direction
     end
 % Set up the event function for the ODE solver
-if tf > 0.9e+6
+if tf > 0.9e+5
     options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z,te,~, ~] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     tDone = te;
@@ -26,9 +26,9 @@ end
 % cFinal is the transversality condition contribution
 cFinal = z(end, 1:3) * F1 + z(end, 4:6) * F2;
 
-x_tf = z(end, length(z0) - length(xf)  : end).'; % extract state portion at final time
+x_tf = z(end, length(xf) + 2 : end).'; % extract state portion at final time
 
-% hamiltonian for minT
+%% hamiltonian for minT
 L = z(1,1:7);              % costates (columns correspond to [L...])
 x = z(1,8:end);            % states (columns correspond to [x...])
 nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));

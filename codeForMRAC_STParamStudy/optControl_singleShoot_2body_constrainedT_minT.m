@@ -56,6 +56,7 @@ u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.0
 muVal = 398600.4418;     % Earth
 uTest = 1;
 minT = 0;
+tol = 1e-11;
 switch propulsionType
     case 'chemical'
         % chem prop
@@ -64,7 +65,7 @@ switch propulsionType
         rf = 2000+6378;
         aTrans = (r0 + rf)/2;
         period = 2*pi*sqrt( (aTrans^3) /muVal  );
-        tf = period*0.5;                % Final time (seconds)
+        tf = period*0.5*1.1;                % Final time (seconds)
 
         x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
         xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]';             % Desired terminal state at t = tf (Mass is free)
@@ -267,7 +268,7 @@ switch propulsionType
         z0F = [lambda0; xf];
         periodF = 2*pi*sqrt( (rf^3) /muVal  );
         timeFinalF = linspace(0, periodF, 405) ;
-        [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-11*Tmax, Isp, g0, epsilon, L0_guess(1)), timeFinalF, z0F, odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off'));
+        [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-13*Tmax, Isp, g0, epsilon, L0_guess(1)), timeFinalF, z0F, odeset('RelTol',1e-11,'AbsTol',1e-11,'Stats','off'));
         xF = zF(:, (length(x0)+1):end);
     case 'electric'
 
@@ -295,7 +296,7 @@ switch propulsionType
 
         z0F = [lambda0; r_pf; v_pf; 1000];
         timeFinalF = linspace(0, periodF, 405) ;
-        [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, 1e-11*Tmax, Isp, g0, epsilon, L0_guess(1)), timeFinalF, z0F, odeset('RelTol', 1e-11,'AbsTol', 1e-11,'Stats','off'));
+        [tF, zF] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth,1e-11*Tmax, Isp, g0, epsilon, L0_guess(1)), timeFinalF, z0F, odeset('RelTol',1e-11,'AbsTol',1e-11,'Stats','off'));
         xF = zF(:, (length(x0)+1):end);
 end
 
@@ -378,8 +379,8 @@ open(vWriter);
 % Depending on the number of steps in 't', we might want to skip frames to keep video short
 nSteps = length(t);
 frameStep = max(1, floor(nSteps / 300)); % Target approx 300 frames max (~10s at 30fps)
-a = 500+6378;
-b = 1200+6378;
+a = 1+6378;
+b = 1330+6378;
 fimplicit(@(x, y) x.^2/a.^2 + y.^2/b.^2 - 1)
 
 for k = 1:frameStep:nSteps
@@ -414,7 +415,7 @@ end
 
 %%
 function F = solveODE__FixedFinal(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
-options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
+options = odeset('RelTol',1e-11, 'AbsTol',1e-11, 'Stats', 'off');
 % Disable all ode45-related warnings
 warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
 warning('off', 'MATLAB:ode45:IntegrationFailed');
