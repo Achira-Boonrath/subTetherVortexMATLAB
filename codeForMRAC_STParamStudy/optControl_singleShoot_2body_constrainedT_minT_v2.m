@@ -55,19 +55,20 @@ u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.0
 % Symbolic substitution based on propulsion type
 muVal = 398600.4418;     % Earth
 uTest = 1;
-minT = 0;
+minT = 1 ;
 tol = 1e-9;
+tf_max = 5e+4;
 
 r0 = 780+6378;
 rf = 2000+6378;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
-tf = period*0.5*1.1;                % Final time (seconds)
+tf = period*0.5*1.0;                % Final time (seconds)
 xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]'; 
 switch propulsionType
     case 'chemical'
         % chem prop
-        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 1000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 3000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 
         lb =  0*[1, 1, 1, 1, 1, 1, 1,...% costates D
             ]';%
@@ -116,7 +117,7 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax=400*1e-3; %in kN
+        Tmax=5000*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
     case 'electric'
@@ -136,12 +137,12 @@ dsDiff = norm( double( funcSubs([x0*10.1;x0]) ) - ds )
 % First try a single invocation of shootingConstT with the initial guess
 rho_s = 00;
 a = 1+6378;
-b = 1330+6378;
+b = 1300+6378;
 
 argsStruct = struct('xf', xf, 'tf', tf, 'muEarth', muEarth, 'Tmax', Tmax, 'Isp', Isp, 'g0', g0, 'epsilon', epsilon,...
     'at', at, 'et', et, 'it', it, 'Omega_t', Omega_t, 'omega_t', omega_t, 'muVal', muVal,...
     'TrustSolve', 0, 'minT', minT, 'FixedFinalPos', FixedFinalPos, ...
-        'rho_s', rho_s, 'a', a, 'b', b);
+        'rho_s', rho_s, 'a', a, 'b', b, 'tf_max', tf_max);
 
 
 diagF_Inv = diag(1);
@@ -153,7 +154,7 @@ objfun = @(lam0) shootingConstT_unified(lam0', x0, argsStruct)' ...
 
 nvars = length(lambda0_guess);
 
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 500, 'MaxIterations', 150, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 300, 'MaxIterations', 150, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
@@ -166,7 +167,7 @@ switch propulsionType
 
             L0_guess= costate_from_D( lambda0_guess(1:end) );
             % Call helper to integrate and compute terminal constraints
-            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], 1e+6, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-6, ...
+            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-6, ...
                 at, et, it, Omega_t, omega_t, muVal);
 
             lambda0_guess = [L0_guess(2:end); tDone ];
@@ -184,7 +185,7 @@ switch propulsionType
 
             L0_guess= costate_from_D( lambda0_guess(1:end-1) );
             % Call helper to integrate and compute terminal constraints
-            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], 1e+6, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
+            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
                 at, et, it, Omega_t, omega_t, muVal);
 
             lambda0_guess = [L0_guess(2:end); lambda0_guess(end); tDone ];
@@ -202,19 +203,22 @@ lambda0 = fsolve(@(lam0) shootingConstT_unified(lam0, x0, argsStruct), ...
 % z0 = [lambda0; x0];
 switch propulsionType
     case 'chemical'
-        z0 = [lambda0; x0];
-
-        [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1) ), [0 tf], z0);
-    case 'electric'
         if minT ==0
-            z0 = [lambda0(1:end-1); x0];
-            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1)), [0 tf], z0);
+        z0 = [lambda0; x0];
         else
-            z0 = [lambda0(1:end-1); x0];
-
-            [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1), 1), [0 tf], z0);
+        z0 = [lambda0(1:end-1); x0];
         end
+    case 'electric'
+        z0 = [lambda0(1:end-1); x0];
 end
+
+if minT ==0
+    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1)), [0 tf], z0);
+else
+    [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT([lambda0(1:end-1); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, at, et, it, Omega_t, omega_t, muVal);
+    figure; plot(z(:, 8), z(:,9 ))
+end
+figure; plot(z(:, 8), z(:,9 ))
 
 % Extract state and costate trajectories from integrated z
 x = z(:, (length(x0)+1):end);               % states (columns correspond to [x y vx vy])

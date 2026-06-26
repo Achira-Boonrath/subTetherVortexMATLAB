@@ -7,12 +7,12 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
     Isp = argsStruct.Isp;
     if argsStruct.TrustSolve == 0
         if argsStruct.minT == 1
-            tf_minT = 1e+5;
+            tf_minT = argsStruct.tf_max;
         end
 
         if argsStruct.FixedFinalPos == 1
             L0= costate_from_D( lambda0(1:end) );
-            theta_f = NaN;
+            theta_f = 1e-9;
         else
             L0= costate_from_D( lambda0(1:end-1) );
             theta_f = lambda0(end);
@@ -27,7 +27,7 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 
         if argsStruct.FixedFinalPos == 1
             z0 = [lambda0(1:end); x0];
-            theta_f = NaN;
+            theta_f = 1e-9;
         else
             z0 = [lambda0(1:end-1); x0];
             theta_f = lambda0(end);
@@ -42,8 +42,8 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
             theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
         
         %% hamiltonian for minT
-        L = z(1,1:7);              % costates (columns correspond to [L...])
-        x = z(1,8:end);            % states (columns correspond to [x...])
+        L = z0(1:7);              % costates (columns correspond to [L...])
+        x = z0(8:end);            % states (columns correspond to [x...])
         nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));
         nPos = (x(1)^(2) + x(2)^(2) + x(3)^(2));        
 
@@ -81,10 +81,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 
         F = [x_tf(1:end-1) - xf_free; cFinal];  % terminal error
     else
-        cFinal = NaN;
-        F1 = NaN;
-        F2 = NaN;
-        xf_free = NaN;
+        cFinal = 1e-9;
+        F1 = 1e-9;
+        F2 = 1e-9;
+        xf_free = 1e-9;
         
         xf_fixed = argsStruct.xf;
         F = [x_tf(1:end-1) - xf_fixed(1:end-1)];  % terminal error

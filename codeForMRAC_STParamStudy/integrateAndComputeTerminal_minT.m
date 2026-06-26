@@ -2,21 +2,22 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 % Helper that integrates the Hamiltonian ODE and computes terminal constraints.
 
     function [position,isterminal,direction] = appleEventsFcn(t,z)
-        position = (abs(z(7)) > 1e-7 ); % The value that we want to be zero
-        % if position == 0
-        %    disp(position)
-        % end
+        position = (abs(z(7)) > 1e-9) || ~isnan(z(7))  ...
+            || (z(end) > 1e-9 || length(z) == 14); % The value that we want to be zero
+        if position == 0
+           % disp(t)
+        end
 
         isterminal = 1;  % Halt integration
         direction = 0;   % The zero can be approached from either direction
     end
 % Set up the event function for the ODE solver
-if tf > 0.9e+5
-    options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off', 'Events', @appleEventsFcn);
+options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off', 'Events', @appleEventsFcn);
+if tf > 1e+4
     [~, z,te,~, ~] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
+    % disp(te)
     tDone = te;
 else
-    options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off');
     [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     tDone = tf;
 end
