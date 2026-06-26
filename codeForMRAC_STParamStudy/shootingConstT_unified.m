@@ -36,10 +36,6 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 
     %%
     if argsStruct.minT == 1
-        % Call helper to integrate and compute terminal constraints
-        [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
-            muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
-            theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
         
         %% hamiltonian for minT
         L = z0(1:7);              % costates (columns correspond to [L...])
@@ -65,6 +61,23 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
          - (Tmax*ax)/mC) - L(5)*((muEarth*x(2))/nPos^(3/2) - (Tmax*ay)/mC) ...
          - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax*g0)/Isp ...
          + rho_s*heaviside(-(- p_min*a^2*b^2 + a^2*ry^2 + b^2*rx^2)/(a^2*b^2))*(rx^2/a^2 - p_min + ry^2/b^2)^2 + L0(1);
+
+        if abs(H) < 1
+            % Call helper to integrate and compute terminal constraints
+            [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
+                muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
+                theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
+        else
+            % Call helper to integrate and compute terminal constraints
+            [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, 10, ...
+            muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
+            theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
+            H = 1e+5;
+        end
+
+        if abs(tDone - tf_minT) < 1e-6
+            H = 1e+5;
+        end
 
     else
         xf_fixed = argsStruct.xf;
