@@ -57,13 +57,14 @@ muVal = 398600.4418;     % Earth
 uTest = 1;
 minT = 1 ;
 tol = 1e-9;
-tf_max = 1e+5;
+tf_max = 1.5e+4;
 
 r0 = 780+6378;
 rf = 2000+6378;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
 tf = period*0.5*1.0;                % Final time (seconds)
+
 % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]'; 
 xf = [0 rf 0 ...
     -sqrt(muVal/rf) 0 0 800]'; 
@@ -71,7 +72,7 @@ xf = [0 rf 0 ...
 switch propulsionType
     case 'chemical'
         % chem prop
-        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 4000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 2000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 
         lb =  0*[1, 1, 1, 1, 1, 1, 1,...% costates D
             ]';%
@@ -99,12 +100,6 @@ switch propulsionType
         lambda0_guess = lb;
 end
 
-[eqns, Lvec, Xnum] = buildHamiltonianEquations(x0, muVal, 'electric',uTest, minT);
-
-%% Build a function handle that substitutes numeric z = [lambda; x] into the
-% symbolic eqns. This handle is passed to the ODE evaluator and shootingConstT.
-funcSubs = @(z) subs(eqns, [Lvec, Xnum], [z(1:length(x0)), z((length(x0)+1):end)] );
-
 %% Quick test: evaluate the Hamiltonian ODE at a sample state vector
 % This calls the numeric ODE wrapper to produce dz/dt for a sample input.
 % dzdt = hamiltonian_ode(0, ones(length(x0)+length(x0), 1), funcSubs);
@@ -120,7 +115,7 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax= 1500*1e-3; %in kN
+        Tmax= 15000*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
     case 'electric'
@@ -133,14 +128,11 @@ g0=9.81*1e-3; %in km/s^2
 epsilon=1;
 ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
 
-%check
-dsDiff = norm( double( funcSubs([x0*10.1;x0]) ) - ds )
-
 %% Solve two-point boundary value problem via shootingConstT
 % First try a single invocation of shootingConstT with the initial guess
-rho_s = 00;
+rho_s = 100;
 a = 1+6378;
-b = 1300+6378;
+b = 800+6378;
 
 argsStruct = struct('xf', xf, 'tf', tf, 'muEarth', muEarth, 'Tmax', Tmax, 'Isp', Isp, 'g0', g0, 'epsilon', epsilon,...
     'at', at, 'et', et, 'it', it, 'Omega_t', Omega_t, 'omega_t', omega_t, 'muVal', muVal,...
