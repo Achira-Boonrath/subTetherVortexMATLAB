@@ -56,11 +56,15 @@ u0= [-1.043291413209001e-5, -1.2687541712307916e-5, 0.00022528860478491966, -0.0
 muVal = 398600.4418;     % Earth
 uTest = 1;
 minT = 1 ;
-tol = 1e-9;
-tf_max = 1.5e+4;
 
+tf_max = 5e+4;
+rho_s = 00;
+a = 1+6378;
+b = 750+6378;
+
+%%
 r0 = 780+6378;
-rf = 2000+6378;
+rf = 1500+6378;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
 tf = period*0.5*1.0;                % Final time (seconds)
@@ -72,7 +76,7 @@ xf = [0 rf 0 ...
 switch propulsionType
     case 'chemical'
         % chem prop
-        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 2000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
+        x0 = [r0 0 0 0 sqrt(muVal/r0) 0 5000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 
         lb =  0*[1, 1, 1, 1, 1, 1, 1,...% costates D
             ]';%
@@ -115,7 +119,7 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax= 15000*1e-3; %in kN
+        Tmax= 150*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
     case 'electric'
@@ -130,10 +134,6 @@ ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest
 
 %% Solve two-point boundary value problem via shootingConstT
 % First try a single invocation of shootingConstT with the initial guess
-rho_s = 100;
-a = 1+6378;
-b = 800+6378;
-
 argsStruct = struct('xf', xf, 'tf', tf, 'muEarth', muEarth, 'Tmax', Tmax, 'Isp', Isp, 'g0', g0, 'epsilon', epsilon,...
     'at', at, 'et', et, 'it', it, 'Omega_t', Omega_t, 'omega_t', omega_t, 'muVal', muVal,...
     'TrustSolve', 0, 'minT', minT, 'FixedFinalPos', FixedFinalPos, ...

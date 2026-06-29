@@ -2,10 +2,30 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 % Helper that integrates the Hamiltonian ODE and computes terminal constraints.
 
     function [position,isterminal,direction] = appleEventsFcn(t,z)
-        position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 1e-9) && (length(z) == 14);...)
+        position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
+
+        r0 = 1+6378;
+        rf = 750+6378;
+        a = r0;
+        b = rf;
+        p_min = 1;
+        rho_s = 00;
+        consOn = 0;
+        
+        argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
+        'muEarth', muEarth);
+
+        if consOn ==1
+            % ds_costate = costate_Dyn(z(8:end), z(1:7), argsCons);
+            % position = (max( abs(ds_costate) ) < 1e+8) && position;
+            x = z(8:end);
+            rx =x(1);ry =x(2);rz =x(3);vx =x(4);vy =x(5);vz =x(6);
+            position= ( (rx^(2))/(a^(2))+(ry^(2))/(b^(2)) > 1 ) && position;
+        end
+
          % The value that we want to be zero
         if position == 0
-           % disp(t)
+           % disp(z(end))
         end
 
         isterminal = 1;  % Halt integration
@@ -14,11 +34,11 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 % Set up the event function for the ODE solver
 options = odeset('RelTol', 1e-9, 'AbsTol', 1e-9, 'Stats', 'off', 'Events', @appleEventsFcn);
 if tf > 1e+4
-    [~, z,te,~, ~] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
+    [~, z,te,~, ~] = ode23(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     % disp(te)
     tDone = te;
 else
-    [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
+    [~, z] =         ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     tDone = tf;
 end
 [xf, ~, ~] = StatesInECI(theta_f, at, et, it, Omega_t, omega_t, muVal);
