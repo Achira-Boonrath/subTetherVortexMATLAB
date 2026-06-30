@@ -16,8 +16,8 @@ function optControl_singleShoot_2body
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 close all; clear all; clc
-propulsionType = 'chemical'; % Options: 'chemical', 'electric'
-% propulsionType = 'electric'; % Options: 'chemical', 'electric'
+% propulsionType = 'chemical'; % Options: 'chemical', 'electric'
+propulsionType = 'electric'; % Options: 'chemical', 'electric'
 %%
 
 % System Parameters:
@@ -57,7 +57,7 @@ muVal = 398600.4418;     % Earth
 uTest = 1;
 minT = 1 ;
 
-tf_max = 5e+4;
+tf_max = 5e+5;
 rho_s = 00;
 a = 1+6378;
 b = 750+6378;
@@ -68,7 +68,7 @@ rf = 1500+6378;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
 tf = period*0.5*1.0;                % Final time (seconds)
-
+% 
 % xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]'; 
 xf = [0 rf 0 ...
     -sqrt(muVal/rf) 0 0 800]'; 
@@ -119,7 +119,7 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax= 150*1e-3; %in kN
+        Tmax= 250*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
     case 'electric'
@@ -149,7 +149,7 @@ objfun = @(lam0) shootingConstT_unified(lam0', x0, argsStruct)' ...
 
 nvars = length(lambda0_guess);
 
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 300, 'MaxIterations', 150, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 600, 'MaxIterations', 150, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf

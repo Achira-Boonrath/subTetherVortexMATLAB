@@ -26,7 +26,7 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         end
 
         if argsStruct.FixedFinalPos == 1
-            z0 = [lambda0(1:end); x0];
+            z0 = [lambda0(1:end-1); x0];
             theta_f = 1e-9;
         else
             z0 = [lambda0(1:end-1); x0];
@@ -36,7 +36,6 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 
     %%
     if argsStruct.minT == 1
-        
         %% hamiltonian for minT
         L = z0(1:7);              % costates (columns correspond to [L...])
         x = z0(8:end);            % states (columns correspond to [x...])
@@ -59,26 +58,28 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 
         H = L(1)*x(4) + L(2)*x(5) + L(3)*x(6) - L(4)*((muEarth*x(1))/nPos^(3/2)...
          - (Tmax*ax)/mC) - L(5)*((muEarth*x(2))/nPos^(3/2) - (Tmax*ay)/mC) ...
-         - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax*g0)/Isp ...
+         - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax)/(Isp*g0) ...
          + rho_s*heaviside(-(- p_min*a^2*b^2 + a^2*ry^2 + b^2*rx^2)/(a^2*b^2))*(rx^2/a^2 - p_min + ry^2/b^2)^2 + L0(1);
 
-        if abs(H) < 1
+        if abs(H) < 0.1
             % Call helper to integrate and compute terminal constraints
             [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
                 muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
                 theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
+
             % disp(tDone)
+
+            if abs(tDone - tf_minT) < 1e-3
+                H = 1e+6;
+            end
         else
             % Call helper to integrate and compute terminal constraints
             [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, 2, ...
             muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
             theta_f, argsStruct.at, argsStruct.et, argsStruct.it, argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
-            H = 1e+5;
+            H = H*(1e+8);
         end
 
-        if abs(tDone - tf_minT) < 1e-6
-            H = 1e+5;
-        end
 
     else
         xf_fixed = argsStruct.xf;
@@ -124,7 +125,6 @@ function [x_tf, z] = solveODE_unify(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsi
     warning('off', 'MATLAB:ode45:IntegrationTolNotMet');
     warning('off', 'MATLAB:ode45:IntegrationFailed');
     warning('off', 'MATLAB:odewarn:IntegrationTolNotMet');
-    warning('off', 'MATLAB:ode15s:IntegrationTolNotMet'); % sometimes triggered internally
     [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), [0 tf], z0, options);
     x_tf = z(end, length(xf) + 2  : end)'; % extract state portion at final time
 

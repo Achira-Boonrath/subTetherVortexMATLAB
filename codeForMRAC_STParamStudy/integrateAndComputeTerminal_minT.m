@@ -2,7 +2,8 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 % Helper that integrates the Hamiltonian ODE and computes terminal constraints.
 
     function [position,isterminal,direction] = appleEventsFcn(t,z)
-        position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
+        % position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
+        position = (abs(z(7)) > 1e-3) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
 
         r0 = 1+6378;
         rf = 750+6378;
@@ -32,12 +33,13 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
         direction = 0;   % The zero can be approached from either direction
     end
 % Set up the event function for the ODE solver
-options = odeset('RelTol', 1e-9, 'AbsTol', 1e-9, 'Stats', 'off', 'Events', @appleEventsFcn);
 if tf > 1e+4
+    options = odeset('RelTol', 1e-8, 'AbsTol', 1e-8, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z,te,~, ~] = ode23(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     % disp(te)
     tDone = te;
 else
+    options = odeset('RelTol', 1e-11, 'AbsTol', 1e-11, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z] =         ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     tDone = tf;
 end
@@ -61,7 +63,7 @@ az = L(6)/(nLv^0.5);
 mC = x(end);
 
 H = L(1)*x(4) + L(2)*x(5) + L(3)*x(6) - L(4)*((muEarth*x(1))/nPos^(3/2) - (Tmax*ax)/mC) - L(5)*((muEarth*x(2))/nPos^(3/2) ...
-    - (Tmax*ay)/mC) - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax*g0)/Isp + L0(1);
+    - (Tmax*ay)/mC) - L(6)*((muEarth*x(3))/nPos^(3/2) - (Tmax*az)/mC) - (L(7)*Tmax)/(Isp*g0) + L0(1);
     if isempty(tDone) == 1
         tDone = tf;
         H = 1e+6;
