@@ -29,12 +29,12 @@ ds(14) = (-(Tmag)/(Isp*g0));
 
 %% constrained state
 r0 = 1+6378;
-rf = 750+6378;
+rf = 780+6378;
 a = r0;
 b = rf;
 p_min = 1;
-rho_s = 00;
-consOn = 0;
+rho_s = 50;
+consOn = 1;
 
 argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
     'muEarth', muEarth,'nPos', nPos, 'nLv',nLv );

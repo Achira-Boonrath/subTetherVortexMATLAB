@@ -16,8 +16,8 @@ function optControl_singleShoot_2body
 % - hamiltonian_odeConstT : evaluates the combined ODE for [lambda; x] given numeric z
 % - shootingConstT        : residual function for terminal constraints, used by fsolve
 close all; clear all; clc
-% propulsionType = 'chemical'; % Options: 'chemical', 'electric'
-propulsionType = 'electric'; % Options: 'chemical', 'electric'
+propulsionType = 'chemical'; % Options: 'chemical', 'electric'
+% propulsionType = 'electric'; % Options: 'chemical', 'electric'
 %%
 
 % System Parameters:
@@ -58,9 +58,9 @@ uTest = 1;
 minT = 1 ;
 
 tf_max = 5e+5;
-rho_s = 00;
+rho_s = 50;
 a = 1+6378;
-b = 750+6378;
+b = 780+6378;
 
 %%
 r0 = 780+6378;
@@ -69,9 +69,9 @@ aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
 tf = period*0.5*1.0;                % Final time (seconds)
 % 
-% xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]'; 
-xf = [0 rf 0 ...
-    -sqrt(muVal/rf) 0 0 800]'; 
+xf = [-rf 0 0 0 -sqrt(muVal/rf) 0 800]'; 
+% xf = [0 rf 0 ...
+%     -sqrt(muVal/rf) 0 0 800]'; 
 
 switch propulsionType
     case 'chemical'

@@ -3,25 +3,26 @@ function [z, xf, x_tf, cFinal, H, tDone] = integrateAndComputeTerminal_minT(z0, 
 
     function [position,isterminal,direction] = appleEventsFcn(t,z)
         % position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
-        position = (abs(z(7)) > 1e-3) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
+        position = (abs(z(7)) > 1e-4) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
 
         r0 = 1+6378;
-        rf = 750+6378;
+        rf = 780+6378;
         a = r0;
         b = rf;
         p_min = 1;
-        rho_s = 00;
-        consOn = 0;
+        rho_s = 50;
+        consOn = 1;
         
         argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
         'muEarth', muEarth);
 
         if consOn ==1
-            % ds_costate = costate_Dyn(z(8:end), z(1:7), argsCons);
-            % position = (max( abs(ds_costate) ) < 1e+8) && position;
-            x = z(8:end);
-            rx =x(1);ry =x(2);rz =x(3);vx =x(4);vy =x(5);vz =x(6);
-            position= ( (rx^(2))/(a^(2))+(ry^(2))/(b^(2)) > 1 ) && position;
+            ds_costate = costate_Dyn(z(8:end), z(1:7), argsCons);
+            position = (max( abs(ds_costate) ) < 5e+8) && position;
+
+            % x = z(8:end);
+            % rx =x(1);ry =x(2);rz =x(3);vx =x(4);vy =x(5);vz =x(6);
+            % position= ( (rx^(2))/(a^(2))+(ry^(2))/(b^(2)) > 1 ) && position;
         end
 
          % The value that we want to be zero
