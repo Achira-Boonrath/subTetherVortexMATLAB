@@ -57,9 +57,9 @@ uTest = 1;
 minT = 1 ;
 
 tf_max = 7e+5;
-rho_s = 0;
+rho_s = 100;
 a = 1+6378;
-b = 770+6378;
+b = 780+6378;
 
 %%
 r0 = 770+6378;
@@ -118,7 +118,7 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax= 250*1e-3; %in kN
+        Tmax= 150*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
     case 'electric'
@@ -214,12 +214,13 @@ end
 if minT ==0
     [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1)), [0 tf], z0);
 else
-    [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, at, et, it, Omega_t, omega_t, muVal);
+    [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, ...
+        at, et, it, Omega_t, omega_t, muVal, argsStruct.TrustSolve);
     % figure; plot(z(:, 8), z(:,9 ))
 end
 %%
 close all
-save("minT_transferEx_v5.mat")
+save("minT_transferEx_v5_cons.mat")
 figure; 
 plot(z(:, 8), z(:,9 ))
 hold on

@@ -10,14 +10,7 @@ end
         % position = (abs(z(7)) > 1e-6) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
         position = (abs(z(7)) > 1e-4) && ~isnan(z(7)) && (z(end) > 0.1) && (length(z) == 14);...)
 
-        position = (max( abs(z(1:7)) ) < 1e+9) && position;
-        % r0 = 1+6378;
-        % rf = 770+6378;
-        % a = r0;
-        % b = rf;
-        % p_min = 1;
-        % rho_s = 0;
-        % consOn = 1;
+        position = (max( abs(z(1:7)) ) < 1e+7) && position;
         % 
         % argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
         %     'muEarth', muEarth, 'L0', L0(1));
@@ -53,7 +46,7 @@ mC = x(end);
 % Set up the event function for the ODE solver
 if trustSolve == 0 %tf > 1e+5
     L0_final = L0(1);
-    options = odeset('RelTol', 1e-8, 'AbsTol', 1e-8, 'Stats', 'off', 'Events', @appleEventsFcn);
+    options = odeset('RelTol', 1e-7, 'AbsTol', 1e-7, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z,te,~, ~] = ode23(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     % disp(te)
     tDone = te;

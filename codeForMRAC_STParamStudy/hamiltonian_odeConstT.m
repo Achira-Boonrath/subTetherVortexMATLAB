@@ -30,12 +30,10 @@ ds(11:13) = - (muEarth/nPos^(3/2) )*x(1:3) - ( L(4:6)/(nLv)^(1/2) )*Tmag/x(7);
 ds(14) = (-(Tmag)/(Isp*g0));
 
 %% constrained state
-r0 = 1+6378;
-rf = 770+6378;
-a = r0;
-b = rf;
+a =  1+6378;
+b =  780+6378;
 p_min = 1;
-rho_s = 0;
+rho_s = 100;
 consOn = 1;
 
 argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
