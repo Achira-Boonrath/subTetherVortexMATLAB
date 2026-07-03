@@ -46,7 +46,7 @@ mC = x(end);
 % Set up the event function for the ODE solver
 if trustSolve == 0 %tf > 1e+5
     L0_final = L0(1);
-    options = odeset('RelTol', 1e-7, 'AbsTol', 1e-7, 'Stats', 'off', 'Events', @appleEventsFcn);
+    options = odeset('RelTol', 1e-9, 'AbsTol', 1e-9, 'Stats', 'off', 'Events', @appleEventsFcn);
     [~, z,te,~, ~] = ode23(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), 1), [0 tf], z0, options);
     % disp(te)
     tDone = te;
