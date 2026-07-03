@@ -84,7 +84,7 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         Lvx = L(4); Lvy = L(5); Lvz = L(6);
         p = (rx^2)/(a^2) + (ry^2)/(b^2);
 
-        kSig = 150; % smoothing gain for the penalty function
+        kSig = 100; % smoothing gain for the penalty function
 
         % Hamiltonian for the minimum-time problem with a smooth path penalty
         H = Lrx*vx + Lry*vy + Lrz*vz ...
@@ -92,7 +92,7 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
             - Lvy*((muEarth*ry)/nPos^(3/2) - (Tmax*ay)/mC) ...
             - Lvz*((muEarth*rz)/nPos^(3/2) - (Tmax*az)/mC) ...
             - (L(7)*Tmax)/(Isp*g0) ...
-            + (rho_s*(rx^2/a^2 - p_min + ry^2/b^2)^2) ...
+            + L0(1)*(rho_s*(rx^2/a^2 - p_min + ry^2/b^2)^2) ...
               /(exp(kSig*(rx^2/a^2 - p_min + ry^2/b^2)) + 1) ...
             + L0(1);
         % Note: the penalty term is a smooth approximation and L0(1) enters as
@@ -101,10 +101,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         if abs(H) < 0.1
             % If the Hamiltonian is nearly zero, integrate at the candidate final
             % time to compute terminal conditions for the shooting residual.
-            [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
+            [z, ~, x_tf, ~, ~, tDone, L0_final] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
                 muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
                 theta_f, argsStruct.at, argsStruct.et, argsStruct.it, ...
-                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
+                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve);
 
             if abs(tDone - tf_minT) < 1e-3
                 % Avoid a false zero residual when the integration ends at the
@@ -113,11 +113,11 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
             end
         else
             % If Hamiltonian is not near zero, use a short integration 
-            [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, 2, ...
+            [z, ~, x_tf, ~, ~, tDone, L0_final] = integrateAndComputeTerminal_minT(z0, 2, ...
                 muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
                 theta_f, argsStruct.at, argsStruct.et, argsStruct.it, ...
-                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal);
-            H = H * 2e+8;
+                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve);
+            H = H * 2e+9;
         end
 
     else
@@ -156,7 +156,7 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         else
             % Trust-region mode adds final mass and costate normalization residuals
             F = [F; z(end,length(x0)); ...
-                    norm([z(1,1:length(x0)), L0]) - 1];
+                    norm([z(1,1:length(x0)), L0_final]) - 1];
         end
     else
         % For fixed-time problems, append final mass costate residual

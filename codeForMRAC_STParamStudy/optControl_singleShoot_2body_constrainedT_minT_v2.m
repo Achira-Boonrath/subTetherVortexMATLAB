@@ -1,4 +1,3 @@
-function optControl_singleShoot_2body
 % optControl_singleShoot_2body
 % Solves a single-shootingConstT optimal control problem
 % The Hamiltonian system (state + costate) is integrated and fsolve is used
@@ -57,13 +56,13 @@ muVal = 398600.4418;     % Earth
 uTest = 1;
 minT = 1 ;
 
-tf_max = 5e+5;
-rho_s = 50;
+tf_max = 7e+5;
+rho_s = 0;
 a = 1+6378;
-b = 780+6378;
+b = 770+6378;
 
 %%
-r0 = 780+6378;
+r0 = 770+6378;
 rf = 1500+6378;
 aTrans = (r0 + rf)/2;
 period = 2*pi*sqrt( (aTrans^3) /muVal  );
@@ -149,7 +148,7 @@ objfun = @(lam0) shootingConstT_unified(lam0', x0, argsStruct)' ...
 
 nvars = length(lambda0_guess);
 
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 600, 'MaxIterations', 150, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 400, 'MaxIterations', 200, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
@@ -157,20 +156,20 @@ switch propulsionType
     case 'chemical'
         if minT == 0
             L0_guess = costate_from_D( lambda0_guess(1:end) );
-            lambda0_guess = [L0_guess(2:end)] ;
+            lambda0_guess_trust = [L0_guess(2:end)] ;
         else
 
             L0_guess= costate_from_D( lambda0_guess(1:end) );
             % Call helper to integrate and compute terminal constraints
-            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-6, ...
+            [~, ~, ~, ~, H, tDone, L0_final]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-6, ...
                 at, et, it, Omega_t, omega_t, muVal);
 
-            lambda0_guess = [L0_guess(2:end); tDone ];
+            lambda0_guess_trust = [L0_guess(2:end); tDone ];
         end
     case 'electric'
         if minT == 0
             L0_guess = costate_from_D( lambda0_guess(1:end-1) );
-            lambda0_guess = [L0_guess(2:end); lambda0_guess(end)] ;
+            lambda0_guess_trust = [L0_guess(2:end); lambda0_guess(end)] ;
         else
             % L0_guess = costate_from_D( lambda0_guess(1:end-2) );
             % lambda0_guess = [L0_guess(2:end); lambda0_guess(end-1:end)] ;
@@ -180,18 +179,19 @@ switch propulsionType
 
             L0_guess= costate_from_D( lambda0_guess(1:end-1) );
             % Call helper to integrate and compute terminal constraints
-            [~, ~, ~, ~, H, tDone]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
+            [~, ~, ~, ~, H, tDone, L0_final]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
                 at, et, it, Omega_t, omega_t, muVal);
 
-            lambda0_guess = [L0_guess(2:end); lambda0_guess(end); tDone ];
+            lambda0_guess_trust = [L0_guess(2:end); lambda0_guess(end); tDone ];
         end
 end
-
-argsStruct.L0 = L0_guess(1);
+%%
+% load("minT_transferEx_v3.mat")
+argsStruct.L0 = L0_final;
 argsStruct.TrustSolve = 1;
 lambda0 = fsolve(@(lam0) shootingConstT_unified(lam0, x0, argsStruct), ...
-    lambda0_guess, ...
-    optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 9000));
+    lambda0_guess_trust, ...
+    optimoptions('fsolve', 'Display', 'iter', "MaxFunctionEvaluations", 9000, "MaxIterations", 9000));
 % lambda0-u0'
 %% Integrate the Hamiltonian system with the solved initial costates
 % Stack initial condition z0 = [lambda0; x0] to integrate the 8-D ODE
@@ -217,7 +217,9 @@ else
     [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, at, et, it, Omega_t, omega_t, muVal);
     % figure; plot(z(:, 8), z(:,9 ))
 end
-
+%%
+close all
+save("minT_transferEx_v5.mat")
 figure; 
 plot(z(:, 8), z(:,9 ))
 hold on
@@ -399,6 +401,6 @@ grid on
 % close(vWriter);
 % fprintf('Animation saved to %s\n', videoFilename);
 % 
-end
+% end
 
 %%

@@ -6,11 +6,13 @@ nLv = (L(4)^(2) + L(5)^(2) + L(6)^(2));
 nPos = (x(1)^(2) + x(2)^(2) + x(3)^(2));
 if nargin < 8
     L0 = 1;
+    [Tmag,~,uSwitch] = ThrottleSwitchingFunc(Isp , g0, (nLv^(1/2)), x, L, L0, epsilon, Tmax);
 elseif nargin > 8
+    Tmag = Tmax;
     uSwitch = uFixed;
+else
+    [Tmag,~, ~] = ThrottleSwitchingFunc(Isp , g0, (nLv^(1/2)), x, L, L0, epsilon, Tmax);
 end
-
-[Tmag,rho,uSwitch] = ThrottleSwitchingFunc(Isp , g0, (nLv^(1/2)), x, L, L0, epsilon, Tmax);
 
 ds = zeros(length(s),1);
 
@@ -29,15 +31,15 @@ ds(14) = (-(Tmag)/(Isp*g0));
 
 %% constrained state
 r0 = 1+6378;
-rf = 780+6378;
+rf = 770+6378;
 a = r0;
 b = rf;
 p_min = 1;
-rho_s = 50;
+rho_s = 0;
 consOn = 1;
 
 argsCons = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, ...
-    'muEarth', muEarth,'nPos', nPos, 'nLv',nLv );
+    'muEarth', muEarth,'nPos', nPos, 'nLv',nLv, 'L0', L0 );
 
 if consOn == 0
     % unconstrained state
@@ -49,7 +51,8 @@ if consOn == 0
     ds(5) = -L(2);
     ds(6) = -L(3);
 else
-    ds(1:6) = costate_Dyn(x, L, argsCons);
+    ds_coststate = costate_Dyn(x, L, argsCons);
+    ds(1:6) =      ds_coststate(1:6);
 
 end
 

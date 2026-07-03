@@ -3,7 +3,8 @@ function [ds] = costate_Dyn(x, L, argsCons)
 a = argsCons.a;
 b = argsCons.b;
 p_min = argsCons.p_min;
-rho_s = argsCons.rho_s;
+L0 = argsCons.L0;
+rho_s = L0 * argsCons.rho_s;
 muEarth = argsCons.muEarth;
 % nPos =argsCons.nPos;
 % nLv = argsCons.nLv;
@@ -41,10 +42,10 @@ ds= zeros(1,6);
 % disp(consX - ds(1))
 % disp(consX )
 % disp(ds(1))
-kSig = 150;
+kSig = 100;
 consX =Lvx*(muEarth/((rx)^2 + (ry)^2 + (rz)^2)^(3/2) - (3*muEarth*rx*abs(rx)*sign(rx))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2)) - (4*rho_s*rx*f_)/(a^2*(exp(kSig*f_) + 1)) - (3*Lvy*muEarth*ry*abs(rx)*sign(rx))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) - (3*Lvz*muEarth*rz*abs(rx)*sign(rx))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) + (2*kSig*rho_s*rx*exp(kSig*f_)*f_^2)/(a^2*(exp(kSig*f_) + 1)^2);
 consY =Lvy*(muEarth/((rx)^2 + (ry)^2 + (rz)^2)^(3/2) - (3*muEarth*ry*abs(ry)*sign(ry))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2)) - (4*rho_s*ry*f_)/(b^2*(exp(kSig*f_) + 1)) - (3*Lvx*muEarth*rx*abs(ry)*sign(ry))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) - (3*Lvz*muEarth*rz*abs(ry)*sign(ry))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) + (2*kSig*rho_s*ry*exp(kSig*f_)*f_^2)/(b^2*(exp(kSig*f_) + 1)^2);
-consZ =                                                                                                                                                                                                                                                   Lvz*(muEarth/((rx)^2 + (ry)^2 + (rz)^2)^(3/2) - (3*muEarth*rz*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2)) - (3*Lvx*muEarth*rx*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) - (3*Lvy*muEarth*ry*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2);
+consZ =Lvz*(muEarth/((rx)^2 + (ry)^2 + (rz)^2)^(3/2) - (3*muEarth*rz*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2)) - (3*Lvx*muEarth*rx*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2) - (3*Lvy*muEarth*ry*abs(rz)*sign(rz))/((rx)^2 + (ry)^2 + (rz)^2)^(5/2);
 ds(1:3) = [consX, consY, consZ];
 
 % ds(1) = (-(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2) )/(1) ...
