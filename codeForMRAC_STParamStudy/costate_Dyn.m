@@ -14,9 +14,12 @@ Lrx =L(1);Lry =L(2);Lrz =L(3);Lvx =L(4);Lvy =L(5);Lvz =L(6);
 
 p = ( (rx^(2))/(a^(2))+(ry^(2))/(b^(2)) );
 
-f_ = f_;
-if f_ > 0.5
-    f_ = 0.5;
+x_offset = 0;
+y_offset = 0;
+f_ = ( (rx - x_offset)^2/a^2 - p_min + (ry - y_offset)^2/b^2);
+
+if f_ > 0.6
+    f_ = 0.6;
 end
 
 %%
@@ -47,7 +50,7 @@ nPos = (rx)^2 + (ry)^2 + (rz)^2;
 consX =Lvx*(muEarth/nPos^(3/2) - (3*muEarth*rx*abs(rx)*sign(rx))/nPos^(5/2)) - (4*rho_s_*rx*f_)/(a^2*(exp(k_*f_) + 1)) - (3*Lvy*muEarth*ry*abs(rx)*sign(rx))/nPos^(5/2) - (3*Lvz*muEarth*rz*abs(rx)*sign(rx))/nPos^(5/2) + (2*k_*rho_s_*rx*exp(k_*f_)*f_^2)/(a^2*(exp(k_*f_) + 1)^2);
 consY =Lvy*(muEarth/nPos^(3/2) - (3*muEarth*ry*abs(ry)*sign(ry))/nPos^(5/2)) - (4*rho_s_*ry*f_)/(b^2*(exp(k_*f_) + 1)) - (3*Lvx*muEarth*rx*abs(ry)*sign(ry))/nPos^(5/2) - (3*Lvz*muEarth*rz*abs(ry)*sign(ry))/nPos^(5/2) + (2*k_*rho_s_*ry*exp(k_*f_)*f_^2)/(b^2*(exp(k_*f_) + 1)^2);
 consZ =                                               -(muEarth*(- Lvz*rx^2 + 3*Lvx*rx*rz - Lvz*ry^2 + 3*Lvy*ry*rz + 2*Lvz*rz^2))/(rx^2 + ry^2 + rz^2)^(5/2);
- 
+
 ds(1:3) = [consX, consY, consZ];
 
 % ds(1) = (-(muEarth*(2*L(4)*x(1)^(2) + 3*L(5)*x(1)*x(2) + 3*L(6)*x(1)*x(3) - L(4)*x(2)^(2) - L(4)*x(3)^(2)))/nPos^(5/2) )/(1) ...
