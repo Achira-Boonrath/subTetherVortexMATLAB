@@ -1,4 +1,5 @@
-function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = calculateAdaptiveControl_Unified(t, s, args, mrac_idx, l_mt_seg1, VR_mt_seg1, evec_mt_seg1, maskMTreal, rotMat_C_A_I)
+function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
+    calculateAdaptiveControl_Unified(t, s, args, mrac_idx, x1, x1dot, maskMTreal, rotMat_C_A_I)
     % calculateAdaptiveControl_Unified
     %
     % Computes the adaptive control law and state derivatives for the Model
@@ -63,9 +64,9 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = calculat
     
     % --- Compute System States for Segment 1 ---
     % x1: Elongation error (Current length - Unstretched length)
-    x1 = (l_mt_seg1 - l0vec(1));
-    % x1dot: Rate of change of elongation (projected relative velocity)
-    x1dot = dot(VR_mt_seg1, evec_mt_seg1);
+    % x1 = (l_mt_seg1 - l0vec(1));
+    % % x1dot: Rate of change of elongation (projected relative velocity)
+    % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
     
     % 1. Derivative of Reference Model Position
     ds_mrac_1(1) = x1dot_m;
@@ -139,8 +140,8 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = calculat
     Kr_hat    = hhat;
     
     % --- System States (Segment 1) ---
-    x1 = (l_mt_seg1 - l0vec(1));
-    x1dot = dot(VR_mt_seg1, evec_mt_seg1);
+    % x1 = (l_mt_seg1 - l0vec(1));
+    % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
     
     % 1. Derivative of Reference Model Position
     ds_mrac_2(1) = x1dot_m;

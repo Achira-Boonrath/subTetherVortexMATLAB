@@ -123,9 +123,16 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     end
     
     %% Adaptive Control
-    
+    % x1 = (l_mt_seg1 - l0vec(1));
+    % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
+    x1 = (sum(L_mags) - l0vec(1));
+    x1dot = 0;
+    for kk = [1:length(L_mags)]
+        x1dot = x1dot + dot(VR_vecs(:, kk), E_vecs(:,kk));
+    end
+
     [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
-        calculateAdaptiveControl_Unified(t, s, args, mrac_idx, l_mt_seg1, VR_mt_seg1, evec_mt_seg1, maskMTreal, rotMat_C_A_I);
+        calculateAdaptiveControl_Unified(t, s, args, mrac_idx, x1, x1dot, maskMTreal, rotMat_C_A_I);
     
     % Update MRAC states
     ds(mrac_idx:mrac_idx+8) = ds_mrac;

@@ -244,8 +244,9 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     
         % desired control profile %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.x1_m0 = 0.0;         args.tOnChaser_fromt0 = 0.0;
-        args.slopeTime = 60;         args.desElong = 0.01/(N_mt_nodes+0);
+        args.slopeTime = 60;         %args.desElong = 0.01/(N_mt_nodes+0);
         % args.slopeTime = 1e-4;         args.desElong = 0.01;
+        args.desElong = 0.01;
         args.ThrustSaturation = 850;
         args.Kp = 6000; args.Kd = 9000;
         args.J2on = 0;
@@ -277,14 +278,14 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         %% Solve ODE for System Dynamics
     
         % Set ODE solver options
-        options = odeset('RelTol', 2e-8,'AbsTol', 2e-8,'Stats','off');
+        options = odeset('RelTol', 5e-8,'AbsTol', 5e-8,'Stats','off');
         % tspan = data.IntegrationTime(Idx0:IdxF) - data.IntegrationTime(Idx0); % Time span for integration
-        tspan = data.IntegrationTime(Idx0:(1700+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
+        tspan = data.IntegrationTime(Idx0:(1100+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
     
         % Start timer for ODE solver
         tStart = tic;
         % Solve the system of ODEs using ode23
-        [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_Unified_args_mex(t,s,args), tspan, s0, options);
+        [t_mod_code2, state_vec] = ode23(@(t,s) stateDeriv_withGrav_LiamSet_Unified_args(t,s,args), tspan, s0, options);
     
         % Measure time taken for integration
         t_ode45 = toc(tStart);
