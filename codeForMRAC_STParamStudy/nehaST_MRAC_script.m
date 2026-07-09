@@ -36,7 +36,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % load("dataForNI1_009_1MT_compare.mat")
     
     % Define number of nodes for Main Tether
-    N_mt_nodes = 5;
+    N_mt_nodes = 6;
     args.N_mt_nodes = N_mt_nodes;
     
     %% Set Sub-Tether Parameters, uniform prop.
@@ -103,7 +103,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     %     threadStiffness, threadStiffness, threadStiffness_3, threadStiffness_3];
     
     % debug
-    Kvec = 0.5*[data.inertialMTParams(end-2)*(N_mt_nodes+0),...
+    Kvec = 0.75*[data.inertialMTParams(end-2)*(N_mt_nodes+0),...
         threadStiffness, threadStiffness, threadStiffness_3, threadStiffness_3];
 
     % vector of damping values, MT then 4 STs
@@ -165,7 +165,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Good 1
         args.L0 = 15*0.9;
         args.kA = 1*chaserM*3.8*(1.1);
-        args.gamma = 30;
+        args.gamma = 160;
         args.sigmaMRAC_h  = 0.05; %1.0e+03; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
         args.sigmaMRAC_a1 = 0.0005; %0.25 * 0.1  *3*4.0*(args.L0/15.0);
         args.sigmaMRAC_a2 = 0.05; %0.25 * 0.01 *3*4.0*(args.L0/15.0);
@@ -259,6 +259,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         args.J2on = 0;
     
         args.MRAC_v = MRAC_v;
+        args.idx_nodes_start = idx_nodes_start;
         %% Solve ODE for System Dynamics
     
         % Recalculate MRAC initial state (Error x1) for Segment 1
@@ -287,7 +288,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Set ODE solver options
         options = odeset('RelTol', 5e-8,'AbsTol', 5e-8,'Stats','off');
         % tspan = data.IntegrationTime(Idx0:IdxF) - data.IntegrationTime(Idx0); % Time span for integration
-        tspan = data.IntegrationTime(Idx0:(1310+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
+        tspan = data.IntegrationTime(Idx0:(1110+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
     
         % Start timer for ODE solver
         tStart = tic;
@@ -352,31 +353,20 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             Kvec/(N_mt_nodes+0), l0vec*(N_mt_nodes+0), cVec/(N_mt_nodes+0), muEarth, FT_const);
         % post compute thrust, from total chaser acceleration
         % Loop through each time step to compute tension magnitude and thrust force
-        for k = 1:length(Tx)
+        x1_hist = zeros(length(Tx), 1);
+        x1dot_hist = zeros(length(Tx), 1);
+        for k = 1:length(Tx)    
             % Compute the magnitude of the sub-tether tension vector
             TmagST(k) = norm([Tx(k, 1), Ty(k, 1), Tz(k, 1)]);
+
+            % Reconstruct the MT elongation state from the simulated node states
+            [x1_hist(k), x1dot_hist(k), L_vecs, L_mags ,E_vecs ,VR_vecs]= computeMTElongationState(state_vec(k, :)', idx_nodes_start, N_mt_nodes, chaserSideLength, l0vec);
     
             % Compute the state derivative at the current time step based on the MRAC version
-            ds_k = ODEscale*stateDeriv_withGrav_LiamSet_Unified_args(t_mod_code2(k), (state_vec(k, :)/ ODEscale)', args);
+            ds_k = ODEscale*stateDeriv_withGrav_LiamSet_Unified_args(t_mod_code2(k), (state_vec(k, :))', args);
     
-            % Define constants for Earth's gravitational and J2 perturbation effects
-            J2 = 1.08263e-3;            % Earth's J2 coefficient
-            rEarth = 6378.0e3;          % Earth's radius in meters
-            posChaser = state_vec(k, 1:3); posChaserNorm = norm(posChaser); % Compute the norm of the chaser position vector
-    
-            % Compute gravitational force acting on the chaser
-            gravChaser = -muEarth * chaserM * posChaser / (posChaserNorm^3);
-    
-            % Compute J2 perturbation force acting on the chaser
-            coeffT = (3 / 2) * J2 * muEarth * (rEarth^2 / posChaserNorm^4);
-            J2_Chaser = args.J2on * chaserM * coeffT * [ ...
-                (5 * (posChaser(3) / posChaserNorm)^2 - 1) * (posChaser(1) / posChaserNorm), ...
-                (5 * (posChaser(3) / posChaserNorm)^2 - 1) * (posChaser(2) / posChaserNorm), ...
-                (5 * (posChaser(3) / posChaserNorm)^2 - 3) * (posChaser(3) / posChaserNorm) ...
-                ];
-    
-            % Compute the total gravitational force acting on the chaser
-            gtotChaser = (gravChaser' + J2_Chaser');
+            % Compute gravity + J2 perturbation on chaser (returns column vector)
+            gtotChaser = computeGravJ2_multi(state_vec(k, 1:3)', chaserM, muEarth, args);
     
             % Compute the control acceleration by subtracting gravitational and tension forces
             accControl = ds_k(4:6) - ...
@@ -441,11 +431,12 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             % Plot MT Elongation and Thrust Force %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             subplot(2, 1, 1)
             % plot(t_plot, elong_mt(1:tSkip:end))
-            plot(t_plot, state_vec(1:tSkip:end, end-1),"--")
+            % plot(t_plot, state_vec(1:tSkip:end, end-1),"--")
+            plot(t_plot, x1_hist(1:tSkip:end),"-")
             hold on;
             % yline(0.01)
             plot(t_plot, state_vec(1:tSkip:end, idx_mrac_start),"--")
-            ylim([0 5e-3])
+            ylim([0 5e-2])
             legend("Actual","Desired")
             xlabel("Time, s", 'fontsize', 13,'interpreter','latex')
             ylabel("MT Elongation, m", 'fontsize', 13,'interpreter','latex')

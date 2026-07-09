@@ -7,6 +7,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     Kvec =args.Kvec; l0vec=args.l0vec; cVec=args.cVec;
     mu=args.mu; FT =args.FT;
     N_mt_nodes = args.N_mt_nodes;
+    idx_nodes_start = args.idx_nodes_start;
     
     %Extract States
     s(1:6)   = s(1:6  ) * args.ODEscale;
@@ -22,7 +23,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     % Extract Nodes
     nodes_pos = zeros(3, N_mt_nodes);
     nodes_vel = zeros(3, N_mt_nodes);
-    idx_start = 27;
+    idx_start = args.idx_nodes_start;
     for i = 1:N_mt_nodes
         idx = idx_start + (i-1)*6;
         nodes_pos(:,i) = s(idx : idx+2);
@@ -68,21 +69,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     % Vectorized Loop over N segments
     % Seg 1: Chaser -> Node 1
     % Seg k: Node k-1 -> Node k
-    
-    % Prep Pos/Vel Matrices for Predecessor (Prev) and Current (Curr) points
-    % Prev: [pos_Att, Node 1, Node 2 ... Node N-1]
-    P_prev = [pos_Att, nodes_pos(:, 1:end-1)];
-    V_prev = [vel_Att, nodes_vel(:, 1:end-1)];
-    
-    % Curr: [Node 1, Node 2 ... Node N]
-    P_curr = nodes_pos;
-    V_curr = nodes_vel;
-    
-    % Vectorized Force Calc
-    L_vecs = P_curr - P_prev;
-    L_mags = sqrt(sum(L_vecs.^2, 1));
-    E_vecs = L_vecs ./ L_mags;
-    VR_vecs = V_curr - V_prev;
+    [x1, x1dot, L_vecs, L_mags ,E_vecs ,VR_vecs] = computeMTElongationState(s, idx_start, N_mt_nodes, chaserSideLength, l0vec);
     
     deltas = L_mags - l0vec(1);
     vr_dots = sum(VR_vecs .* E_vecs, 1);
@@ -106,21 +93,18 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     if N_mt_nodes > 1
         Force_nodes(:, 1:end-1) = Force_nodes(:, 1:end-1) + Tvecs(:, 2:end);
     end
-    
+
     % Capture Segment 1 info for Control logic
-    l_mt_seg1 = L_mags(1);
+    l_mt_seg1 = L_mags(1); 
     VR_mt_seg1 = VR_vecs(:,1);
     evec_mt_seg1 = E_vecs(:,1);
     Tvec_mt_seg1 = Tvecs(:,1);
     maskMTreal = activeMask(1);
     
-    % Gravity on Nodes
+    % Gravity on Nodes (vectorized)
     m_node = massPoint1 / N_mt_nodes; % Distribute mass
-    for i = 1:N_mt_nodes
-        pos = nodes_pos(:, i);
-        grav = -mu * m_node * pos / (norm(pos)^3);
-        Force_nodes(:, i) = Force_nodes(:, i) + grav;
-    end
+    gravAll = computeGravJ2_multi(nodes_pos, m_node, mu, args); % 3 x N
+    Force_nodes = Force_nodes + gravAll;
     
     %% Adaptive Control
     % x1 = (l_mt_seg1 - l0vec(1));
@@ -138,20 +122,9 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     ds(mrac_idx:mrac_idx+8) = ds_mrac;
     
     %% with gravity;
-    J2 = 1.08263e-3;
-    rEarth = 6378.0e3;
-    posChaserNorm = norm(posChaser);
-    coeffT = (3 / 2) * J2 * mu * (rEarth ^ 2 / posChaserNorm ^ 4);
+    gtotChaser = computeGravJ2_multi(s(1:3), chaserM, mu, args);
     
-    gravChaser = - mu*chaserM*posChaser/(posChaserNorm^3);
-    
-    J2_Chaser = args.J2on*chaserM * coeffT * [ ...
-        (5 * (posChaser(3) / posChaserNorm)^2 - 1) * (posChaser(1) / posChaserNorm), ...
-        (5 * (posChaser(3) / posChaserNorm)^2 - 1) * (posChaser(2) / posChaserNorm), ...
-        (5 * (posChaser(3) / posChaserNorm)^2 - 3) * (posChaser(3) / posChaserNorm) ...
-        ];
-    
-    accChaser = (Force_Chaser_Tether + Fthrust + gravChaser + J2_Chaser')/chaserM;
+    accChaser = (Force_Chaser_Tether + Fthrust + gtotChaser)/chaserM;
     
     %% Sliding Att Control
     
@@ -221,14 +194,8 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
         appTorqueTarget = appTorqueTarget + cross(distAttPt_to_D, rotMat_D_A_I*Tvec_st(:,i));
     end
     
-    J2_Target = args.J2on*targetM * coeffT * [ ...
-        (5 * (posTarget(3) / norm(posTarget))^2 - 1) * (posTarget(1) / norm(posTarget)), ...
-        (5 * (posTarget(3) / norm(posTarget))^2 - 1) * (posTarget(2) / norm(posTarget)), ...
-        (5 * (posTarget(3) / norm(posTarget))^2 - 3) * (posTarget(3) / norm(posTarget)) ...
-        ];
-    
-    gravTarget = - mu*targetM*posTarget/(norm(posTarget)^3);
-    accTarget = (sum(Tvec_st,2) + gravTarget + J2_Target')/targetM;
+    gtotTarget = computeGravJ2_multi(s(14:16), targetM, mu, args);
+    accTarget = (sum(Tvec_st,2) + gtotTarget)/targetM;
     
     %% N2L Connection Point (Node N)
     
