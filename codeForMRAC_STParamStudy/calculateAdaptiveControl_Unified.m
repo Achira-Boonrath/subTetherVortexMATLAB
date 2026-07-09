@@ -15,7 +15,7 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
     %                  * args.cVec, args.Kvec: Damping and stiffness arrays
     %                  * args.l0vec: Unstretched tether lengths
     %                  * args.L0, args.kA, args.gamma: MRAC-1 specific gains
-    %                  * args.Gamma_x, args.Gamma_r, args.Gamma_theta: Adaptive Linear update gains
+    %                  * args.Gamma_x, args.Gamma_r, args.Gamma_theta: MRAC 2 update gains
     %                  * args.P, args.B_linear: Lyapunov equation parameters
     %                  * args.ThrustSaturation: Maximum allowable thrust
     %                  * ... and other desElong/slopeTime parameters.
@@ -43,13 +43,44 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
     ds_mrac_2 = zeros(1, 9);
     ds_mrac = zeros(1, 9);
     Fthrust = zeros(3, 1);
-    % ==================================================================================================================================================
+
+    %% 1. Derivative of Reference Model Position
+
+    x1_m    = s(mrac_idx);      % Reference model state (position/elongation)
+    x1dot_m = s(mrac_idx+1);    % Reference model state (rate)
+
+    ds_mrac_1(1) = x1dot_m;
+    ds_mrac_2(1) = ds_mrac_1(1);
+    % --- Desired Trajectory Generation ---
+    % Ramps up desired elongation from x1_m0 to desElong over slopeTime
+    x1_m0  = args.x1_m0 ;
+    tOnChaser_fromt0  = args.tOnChaser_fromt0 ;
+    slopeTime = args.slopeTime;
+    desElong  = args.desElong ;
+    ThrustSaturation = args.ThrustSaturation;
+    
+    % Compute time-varying desired elongation
+    desElongScale = min(max((t - tOnChaser_fromt0)/slopeTime, 0.0), 1.0);
+    desElonVary   = x1_m0 + desElongScale * ((desElong - x1_m0) / 1.0);
+
+    % --- Reference Model Dynamics ---
+    Kp = args.Kp; Kd = args.Kd;
+    % The reference model is a mass-spring-damper system driven by PD control to track desElonVary.
+    % It includes a saturation term to represent physical thrust limits.
+    % ds_mrac_1(2) = - max([0, (cVec(1)/chaserM)*x1dot_m + (Kvec(1)/chaserM)*max([0, x1_m]) ]) ...
+    %     + min(max(Kp*(desElonVary-x1_m) + Kd*(-x1dot_m),
+    %     -ThrustSaturation/chaserM), ThrustSaturation/chaserM); old, elong
+    %     measured using first segment only
+    
+    N_mt_nodes = args.N_mt_nodes;
+    ds_mrac_1(2) = - max([0, (cVec(1)/chaserM)*x1dot_m/(N_mt_nodes+0) + (Kvec(1)/chaserM)*max([0, x1_m])/(N_mt_nodes+0) ]) ...
+        + min(max(Kp*(desElonVary-x1_m) + Kd*(-x1dot_m), -ThrustSaturation/chaserM), ThrustSaturation/chaserM);
+    ds_mrac_2(2) = ds_mrac_1(2);
+    %% ==================================================================================================================================================
     % MRAC Version 1:
     % ==================================================================================================================================================
     
     % --- Extract current Adaptive States ---
-    x1_m    = s(mrac_idx);      % Reference model state (position/elongation)
-    x1dot_m = s(mrac_idx+1);    % Reference model state (rate)
     hhat    = s(mrac_idx+2);    % Adaptive parameter estimate: h_hat
     ahat_1  = s(mrac_idx+3);    % Adaptive parameter estimate: a_hat_1
     ahat_2  = s(mrac_idx+4);    % Adaptive parameter estimate: a_hat_2
@@ -67,31 +98,9 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
     % x1 = (l_mt_seg1 - l0vec(1));
     % % x1dot: Rate of change of elongation (projected relative velocity)
     % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
-    
-    % 1. Derivative of Reference Model Position
-    ds_mrac_1(1) = x1dot_m;
-    
-    % --- Desired Trajectory Generation ---
-    % Ramps up desired elongation from x1_m0 to desElong over slopeTime
-    x1_m0  = args.x1_m0 ;
-    tOnChaser_fromt0  = args.tOnChaser_fromt0 ;
-    slopeTime = args.slopeTime;
-    desElong  = args.desElong ;
-    ThrustSaturation = args.ThrustSaturation;
-    
+
     % Sliding surface variable 's' (not to be confused with state vector s)
     sliding = (x1dot - x1dot_m) + L0*(x1 - x1_m);
-    
-    % Compute time-varying desired elongation
-    desElongScale = min(max((t - tOnChaser_fromt0)/slopeTime, 0.0), 1.0);
-    desElonVary   = x1_m0 + desElongScale * ((desElong - x1_m0) / 1.0);
-    
-    % --- Reference Model Dynamics ---
-    Kp = args.Kp; Kd = args.Kd;
-    % The reference model is a mass-spring-damper system driven by PD control to track desElonVary.
-    % It includes a saturation term to represent physical thrust limits.
-    ds_mrac_1(2) = - max([0, (cVec(1)/chaserM)*x1dot_m + (Kvec(1)/chaserM)*max([0, x1_m]) ]) ...
-        + min(max(Kp*(desElonVary-x1_m) + Kd*(-x1dot_m), -ThrustSaturation/chaserM), ThrustSaturation/chaserM);
     
     % --- Control Law Calculation ---
     x_rDdot = ds_mrac_1(2) - L0*(x1dot - x1dot_m);
@@ -123,13 +132,11 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
     ds_mrac_1(8:9) = [x1dot, clipped_delta];
     
     
-    % ==================================================================================================================================================
+    %% ==================================================================================================================================================
     % MRAC Version 2:
     % ==================================================================================================================================================
     
     % --- Extract States ---
-    x1_m = s(mrac_idx);          % Ref model pos
-    x1dot_m = s(mrac_idx+1);     % Ref model rate
     hhat = s(mrac_idx+2);        % Adaptive gain: K_r_hat (Command feedforward)
     ahat_1 = s(mrac_idx+3);      % Adaptive gain: K_x_hat component 1
     ahat_2 = s(mrac_idx+4);      % Adaptive gain: K_x_hat component 2
@@ -143,32 +150,13 @@ function [ds_mrac, Fthrust, MRAC_1_updateParams, MRAC_2_updateParams] = ...
     % x1 = (l_mt_seg1 - l0vec(1));
     % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
     
-    % 1. Derivative of Reference Model Position
-    ds_mrac_2(1) = x1dot_m;
-    
-    % --- Desired Trajectory ---
-    x1_m0  = args.x1_m0 ;
-    tOnChaser_fromt0  = args.tOnChaser_fromt0 ;
-    slopeTime = args.slopeTime;
-    desElong  = args.desElong ;
-    ThrustSaturation = args.ThrustSaturation;
-    
-    % Extract Adaptive Linear specific gains
+    % Extract MRAC 2 specific gains
     Gamma_x =  args.Gamma_x;
     Gamma_r = args.Gamma_r;
     Gamma_theta = args.Gamma_theta;
     P  = args.P;                % Solution to Lyapunov equation
     B_linear = args.B_linear ;
     sigmaMRACLin = args.sigmaMRACLin ;
-    
-    % Compute desired elongation
-    desElongScale = min(max((t - tOnChaser_fromt0)/slopeTime, 0.0), 1.0);
-    desElonVary   = x1_m0 + desElongScale * ((desElong - x1_m0) / 1.0);
-    
-    % --- Reference Model Dynamics ---
-    Kp = args.Kp; Kd = args.Kd;
-    ds_mrac_2(2) = - max([0, (cVec(1)/chaserM)*x1dot_m + (Kvec(1)/chaserM)*max([0, x1_m]) ]) ...
-        + min(max(Kp*(desElonVary-x1_m) + Kd*(-x1dot_m), -ThrustSaturation/chaserM), ThrustSaturation/chaserM);
     
     % --- Error and Regressor Definitions ---
     e      = [x1 - x1_m; x1dot - x1dot_m];    % Tracking error vector e = x - x_m

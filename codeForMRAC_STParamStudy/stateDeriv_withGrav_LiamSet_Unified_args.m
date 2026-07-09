@@ -125,7 +125,7 @@ function [ds] = stateDeriv_withGrav_LiamSet_Unified_args(t,s, args)
     %% Adaptive Control
     % x1 = (l_mt_seg1 - l0vec(1));
     % x1dot = dot(VR_mt_seg1, evec_mt_seg1);
-    x1 = (sum(L_mags) - l0vec(1));
+    x1 = (sum(L_mags) - l0vec(1)*N_mt_nodes);
     x1dot = 0;
     for kk = [1:length(L_mags)]
         x1dot = x1dot + dot(VR_vecs(:, kk), E_vecs(:,kk));

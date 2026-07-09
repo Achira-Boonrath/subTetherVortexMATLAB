@@ -5,8 +5,8 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     %% Func Description
     % w: 3x1 decision variable vector
     close all
-    % clear all
-    % clc
+    clear all
+    clc
     
     %% opt comb 1
     %threadDamping = 10^(wIn(3)*3.5);
@@ -36,7 +36,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     % load("dataForNI1_009_1MT_compare.mat")
     
     % Define number of nodes for Main Tether
-    N_mt_nodes = 10;
+    N_mt_nodes = 5;
     args.N_mt_nodes = N_mt_nodes;
     
     %% Set Sub-Tether Parameters, uniform prop.
@@ -99,10 +99,17 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
     l0vec = [l0_mt/(N_mt_nodes+0),...
         l0_1,l0_2,l0_3,l0_4];
     % vector of unstretched length, MT then 4 STs
-    Kvec = [data.inertialMTParams(end-2)*(N_mt_nodes+0),...
+    % Kvec = [data.inertialMTParams(end-2)*(N_mt_nodes+0),...
+    %     threadStiffness, threadStiffness, threadStiffness_3, threadStiffness_3];
+    
+    % debug
+    Kvec = 0.5*[data.inertialMTParams(end-2)*(N_mt_nodes+0),...
         threadStiffness, threadStiffness, threadStiffness_3, threadStiffness_3];
+
     % vector of damping values, MT then 4 STs
-    cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0),...
+    % cVec = [data.inertialMTParams(end-1)*(N_mt_nodes+0),...
+    %     threadDamping,threadDamping,threadDamping_3,threadDamping_3];
+    cVec = 1*[data.inertialMTParams(end-1)*(N_mt_nodes+0),...
         threadDamping,threadDamping,threadDamping_3,threadDamping_3];
     
     %% Expand s0 for N nodes
@@ -192,7 +199,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         args.sigmaMRAC_a2 = (args.gamma/30)*0.05;
 
         args.Gamma_x = 35.0*[[5e+7 ,   0];       [  0 ,  5e+7]];
-        args.Gamma_r = 35.0*150e+10;
+        args.Gamma_r = 35.0*5e+10;
         args.Gamma_theta = 35.0*[[5e+7,   0];       [  0 ,  1e+4]];
         args.P = [[465.0415   ,   5.2612624];       [  5.2612624,   6.547933 ]];
         args.B_linear = [0, 1/chaserM]';
@@ -245,7 +252,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % desired control profile %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         args.x1_m0 = 0.0;         args.tOnChaser_fromt0 = 0.0;
         args.slopeTime = 60;         %args.desElong = 0.01/(N_mt_nodes+0);
-        % args.slopeTime = 1e-4;         args.desElong = 0.01;
+        % args.slopeTime = 1e-6;         args.desElong = 0.01;
         args.desElong = 0.01;
         args.ThrustSaturation = 850;
         args.Kp = 6000; args.Kd = 9000;
@@ -280,7 +287,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
         % Set ODE solver options
         options = odeset('RelTol', 5e-8,'AbsTol', 5e-8,'Stats','off');
         % tspan = data.IntegrationTime(Idx0:IdxF) - data.IntegrationTime(Idx0); % Time span for integration
-        tspan = data.IntegrationTime(Idx0:(1100+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
+        tspan = data.IntegrationTime(Idx0:(1310+Idx0) ) - data.IntegrationTime(Idx0); % Time span for integration
     
         % Start timer for ODE solver
         tStart = tic;
@@ -350,7 +357,7 @@ function [cost] = nehaST_MRAC_script(wIn2)%(wIn)
             TmagST(k) = norm([Tx(k, 1), Ty(k, 1), Tz(k, 1)]);
     
             % Compute the state derivative at the current time step based on the MRAC version
-            ds_k = stateDeriv_withGrav_LiamSet_Unified_args(t_mod_code2(k), state_vec(k, :)', args);
+            ds_k = ODEscale*stateDeriv_withGrav_LiamSet_Unified_args(t_mod_code2(k), (state_vec(k, :)/ ODEscale)', args);
     
             % Define constants for Earth's gravitational and J2 perturbation effects
             J2 = 1.08263e-3;            % Earth's J2 coefficient
