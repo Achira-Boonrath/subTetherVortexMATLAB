@@ -6,7 +6,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
 %
 %   This function builds the residual vector for the boundary value problem
 %   solver. It supports both minimum-time and fixed-time formulations, and
-%   handles fixed and free final position cases.
+%   handles fixed and free final position cases. For the fixed final
+%   position case, argsStruct.FreeFinalStates = 1 leaves the final states
+%   x_f(4:6) free and enforces the transversality condition L(4:6)(tf) = 0
+%   in place of the velocity matching residual x_tf(4:6) - xf(4:6).
 %
 % Inputs:
 %   lambda0    - initial guess for costates and optionally final anomaly/time
@@ -21,6 +24,26 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
     Tmax = argsStruct.Tmax;
     g0 = argsStruct.g0;
     Isp = argsStruct.Isp;
+
+    % Free final states option (chemical / fixed final position case):
+    % when set, the terminal residual x_tf(4:6) - xf(4:6) is replaced by the
+    % transversality condition L(4:6)(tf) = 0.
+    if isfield(argsStruct, 'FreeFinalStates')
+        FreeFinalStates = argsStruct.FreeFinalStates;
+    else
+        FreeFinalStates = 0;
+    end
+
+    % Path-constraint parameters, forwarded to hamiltonian_odeConstT via
+    % consParams. Defaults match the values hamiltonian_odeConstT falls
+    % back to when no override is supplied.
+    if isfield(argsStruct, 'a'),      a_cons = argsStruct.a;         else, a_cons = 1+6378;     end
+    if isfield(argsStruct, 'b'),      b_cons = argsStruct.b;         else, b_cons = 770+6378;   end
+    if isfield(argsStruct, 'p_min'),  p_min_cons = argsStruct.p_min; else, p_min_cons = 1;      end
+    if isfield(argsStruct, 'rho_s'),  rho_s_cons = argsStruct.rho_s; else, rho_s_cons = 1000000; end
+    if isfield(argsStruct, 'consOn'), consOn_cons = argsStruct.consOn; else, consOn_cons = 1;   end
+    consParams = struct('a', a_cons, 'b', b_cons, 'p_min', p_min_cons, ...
+        'rho_s', rho_s_cons, 'consOn', consOn_cons);
 
     %% Construct the initial augmented state z0 and final anomaly theta_f
     if argsStruct.TrustSolve == 0
@@ -72,10 +95,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         mC = x(end); % instantaneous spacecraft mass
 
         % Penalty parameters for safety or path constraint enforcement
-        p_min = 1;
-        rho_s = argsStruct.rho_s;
-        a = argsStruct.a;
-        b = argsStruct.b;
+        p_min = p_min_cons;
+        rho_s = rho_s_cons;
+        a = a_cons;
+        b = b_cons;
 
         % Unpack state and costate components for readability
         rx = x(1); ry = x(2); rz = x(3);
@@ -101,10 +124,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         if abs(H) < 0.1
             % If the Hamiltonian is nearly zero, integrate at the candidate final
             % time to compute terminal conditions for the shooting residual.
-            [z, ~, x_tf, ~, ~, tDone, L0_final] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
+            [z, ~, x_tf, ~, ~, tDone, L0_final, L_tf] = integrateAndComputeTerminal_minT(z0, tf_minT, ...
                 muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
                 theta_f, argsStruct.at, argsStruct.et, argsStruct.it, ...
-                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve);
+                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve, consParams);
 
             if abs(tDone - tf_minT) < 1e-3
                 % Avoid a false zero residual when the integration ends at the
@@ -113,10 +136,10 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
             end
         else
             % If Hamiltonian is not near zero, use a short integration 
-            [z, ~, x_tf, ~, ~, tDone, L0_final] = integrateAndComputeTerminal_minT(z0, 2, ...
+            [z, ~, x_tf, ~, ~, tDone, L0_final, L_tf] = integrateAndComputeTerminal_minT(z0, 2, ...
                 muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, ...
                 theta_f, argsStruct.at, argsStruct.et, argsStruct.it, ...
-                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve);
+                argsStruct.Omega_t, argsStruct.omega_t, argsStruct.muVal, argsStruct.TrustSolve, consParams);
             H = H * 2e+9;
         end
 
@@ -124,7 +147,8 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         % Fixed-time problem: integrate the unified Hamiltonian dynamics directly
         xf_fixed = argsStruct.xf;
         [x_tf, z] = solveODE_unify(z0, x0, xf_fixed(1:end-1), argsStruct.tf, ...
-            muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0);
+            muEarth, argsStruct.Tmax, Isp, g0, argsStruct.epsilon, L0, consParams);
+        L_tf = z(end, 1:7).'; % costates at final time (for free final states option)
     end
 
     %% Build terminal shoot residuals for free or fixed final position
@@ -145,7 +169,13 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
         xf_free = 1e-9;
 
         xf_fixed = argsStruct.xf;
-        F = [x_tf(1:end-1) - xf_fixed(1:end-1)];
+        if FreeFinalStates == 1
+            % Free final states: match final position only; transversality
+            % requires the velocity costates to vanish at the final time.
+            F = [x_tf(1:3) - xf_fixed(1:3); L_tf(4:6)];
+        else
+            F = [x_tf(1:end-1) - xf_fixed(1:end-1)];
+        end
     end
 
     %% Append final conditions depending on formulation and solve mode
@@ -164,9 +194,13 @@ function F = shootingConstT_unified(lambda0, x0, argsStruct)
     end
 end
 
-function [x_tf, z] = solveODE_unify(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0)
+function [x_tf, z] = solveODE_unify(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsilon, L0, consParams)
 % solveODE_unify  Integrate the unified Hamiltonian ODE for a fixed-time
 % constant-thrust problem and return the final state.
+
+    if nargin < 11
+        consParams = struct();
+    end
 
     options = odeset('RelTol',1e-11, 'AbsTol',1e-11, 'Stats','off');
     % Suppress ode45 warning messages during the solve
@@ -174,7 +208,7 @@ function [x_tf, z] = solveODE_unify(z0, x0, xf, tf, muEarth, Tmax, Isp, g0, epsi
     warning('off', 'MATLAB:ode45:IntegrationFailed');
     warning('off', 'MATLAB:odewarn:IntegrationTolNotMet');
 
-    [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1)), ...
+    [~, z] = ode45(@(t,z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0(1), [], consParams), ...
         [0 tf], z0, options);
 
     % Extract the final state vector from the integrated trajectory

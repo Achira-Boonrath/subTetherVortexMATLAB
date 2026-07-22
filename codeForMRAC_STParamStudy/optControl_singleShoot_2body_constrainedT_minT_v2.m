@@ -57,9 +57,11 @@ uTest = 1;
 minT = 1 ;
 
 tf_max = 7e+5;
-rho_s = 100;
+rho_s = 1e+5;
 a = 1+6378;
-b = 780+6378;
+b = 772+6378;
+p_min = 1;
+consOn = 1; % 1: use constrained (path-penalty) costate dynamics in hamiltonian_odeConstT
 
 %%
 r0 = 770+6378;
@@ -77,7 +79,7 @@ switch propulsionType
         % chem prop
         x0 = [r0 0 0 0 sqrt(muVal/r0) 0 5000]';           % Initial state: x, y, z (m), vx, vy, vz (m/s), m (kg)
 
-        lb =  0*[1, 1, 1, 1, 1, 1, 1,...% costates D
+        lb =  [1e-8, 0, 0, 0, 0, 0, 0,...% costates D
             ]';%
         ub =  [1, 1, 1, 1, 1, 1, 1,...% costates D
             ]';% thetaf
@@ -118,25 +120,28 @@ omega_t = deg2rad(0);   % argument of periapsis
 
 switch propulsionType
     case 'chemical'
-        Tmax= 150*1e-3; %in kN
+        Tmax= 250*1e-3; %in kN
         Isp=230;
         FixedFinalPos = 1;
+        FreeFinalStates = 0; % 1: free final states x_f(4:6) -> transversality L(4:6)(tf) = 0 replaces x_tf(4:6) - xf(4:6) = 0
     case 'electric'
         Tmax=0.1*1e-3; %in kN
         Isp=3000;
         FixedFinalPos = 0;
+        FreeFinalStates = 0; % not used for electric (free final position formulation)
 end
 
 g0=9.81*1e-3; %in km/s^2
 epsilon=1;
-ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest);
+consParams = struct('a', a, 'b', b, 'p_min', p_min, 'rho_s', rho_s, 'consOn', consOn);
+ds = hamiltonian_odeConstT(0, [x0*10.1;x0], muVal, Tmax, Isp, g0, epsilon, uTest, [], consParams);
 
 %% Solve two-point boundary value problem via shootingConstT
 % First try a single invocation of shootingConstT with the initial guess
 argsStruct = struct('xf', xf, 'tf', tf, 'muEarth', muEarth, 'Tmax', Tmax, 'Isp', Isp, 'g0', g0, 'epsilon', epsilon,...
     'at', at, 'et', et, 'it', it, 'Omega_t', Omega_t, 'omega_t', omega_t, 'muVal', muVal,...
-    'TrustSolve', 0, 'minT', minT, 'FixedFinalPos', FixedFinalPos, ...
-        'rho_s', rho_s, 'a', a, 'b', b, 'tf_max', tf_max);
+    'TrustSolve', 0, 'minT', minT, 'FixedFinalPos', FixedFinalPos, 'FreeFinalStates', FreeFinalStates, ...
+        'rho_s', rho_s, 'a', a, 'b', b, 'p_min', p_min, 'consOn', consOn, 'tf_max', tf_max);
 
 
 diagF_Inv = diag(1);
@@ -148,10 +153,12 @@ objfun = @(lam0) shootingConstT_unified(lam0', x0, argsStruct)' ...
 
 nvars = length(lambda0_guess);
 
-opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 400, 'MaxIterations', 200, "UseParallel", true);
+opts = optimoptions('particleswarm', 'Display', 'iter', "SwarmSize", 400, 'MaxIterations', 2, "UseParallel", true);
 lambda0_guess = particleswarm(objfun, nvars, lb, ub, opts);
 lambda0_guess = lambda0_guess';
 %% Now use fsolve to find lambda0 that makes the terminal state match xf
+% clear all
+% load("minT_transferEx_v5_cons_checkTrustInputs.mat")
 switch propulsionType
     case 'chemical'
         if minT == 0
@@ -162,7 +169,7 @@ switch propulsionType
             L0_guess= costate_from_D( lambda0_guess(1:end) );
             % Call helper to integrate and compute terminal constraints
             [~, ~, ~, ~, H, tDone, L0_final]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-6, ...
-                at, et, it, Omega_t, omega_t, muVal);
+                at, et, it, Omega_t, omega_t, muVal, 0, consParams);
 
             lambda0_guess_trust = [L0_guess(2:end); tDone ];
         end
@@ -180,7 +187,7 @@ switch propulsionType
             L0_guess= costate_from_D( lambda0_guess(1:end-1) );
             % Call helper to integrate and compute terminal constraints
             [~, ~, ~, ~, H, tDone, L0_final]= integrateAndComputeTerminal_minT([L0_guess(2:end); x0], tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, lambda0_guess(end), ...
-                at, et, it, Omega_t, omega_t, muVal);
+                at, et, it, Omega_t, omega_t, muVal, 0, consParams);
 
             lambda0_guess_trust = [L0_guess(2:end); lambda0_guess(end); tDone ];
         end
@@ -211,16 +218,18 @@ switch propulsionType
         end
 end
 
+%%
 if minT ==0
-    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1)), [0 tf], z0);
+    [t, z] = ode45(@(t, z) hamiltonian_odeConstT(t, z, muEarth, Tmax, Isp, g0, epsilon, L0_guess(1), [], consParams), [0 tf], z0);
 else
-    [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, tf_max, muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, ...
-        at, et, it, Omega_t, omega_t, muVal, argsStruct.TrustSolve);
+    [z, ~, x_tf, ~, ~, tDone] = integrateAndComputeTerminal_minT(z0, lambda0(end), muEarth, Tmax, Isp, g0, epsilon, L0_guess, 1e-9, ...
+        at, et, it, Omega_t, omega_t, muVal, argsStruct.TrustSolve, consParams);
     % figure; plot(z(:, 8), z(:,9 ))
 end
 %%
-close all
-save("minT_transferEx_v5_cons.mat")
+% close all
+% save("minT_transferEx_v6.mat")
+load("minT_transferEx_v6_cons.mat")
 figure; 
 plot(z(:, 8), z(:,9 ))
 hold on
